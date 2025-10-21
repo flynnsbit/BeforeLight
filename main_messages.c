@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
 
     if (random_mode) {
-        FILE *fp = popen("curl -s https://api.quotable.io/random | grep '\"content\"' | cut -d'\"' -f4", "r");
+        FILE *fp = popen("curl -s http://api.quotable.io/random | grep '\"content\"' | cut -d'\"' -f4", "r");
         if (fp) {
             if (fgets(message_text, sizeof(message_text), fp)) {
                 char *newline = strchr(message_text, '\n');
