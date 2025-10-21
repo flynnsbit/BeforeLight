@@ -13,6 +13,7 @@ static void usage(const char *prog) {
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -s F    Speed multiplier (default: 1.0)\n");
     fprintf(stderr, "  -f 0|1  Fullscreen (1=yes, 0=windowed) (default: 1)\n");
+    fprintf(stderr, "  -t STR  Message text (default: 'OUT TO LUNCH')\n");
     fprintf(stderr, "  -h      Show this help\n");
 }
 
@@ -20,8 +21,9 @@ int main(int argc, char *argv[]) {
     int opt;
     float speed_mult = 1.0f;
     int do_fullscreen = 1;
+    const char *message = "OUT TO LUNCH";
 
-    while ((opt = getopt(argc, argv, "s:f:h")) != -1) {
+    while ((opt = getopt(argc, argv, "s:f:t:h")) != -1) {
         switch (opt) {
             case 's':
                 speed_mult = atof(optarg);
@@ -30,6 +32,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'f':
                 do_fullscreen = atoi(optarg);
+                break;
+            case 't':
+                message = optarg;
                 break;
             case 'h':
             default:
@@ -114,7 +119,7 @@ int main(int argc, char *argv[]) {
 
     // Render text
     SDL_Color white = {255, 255, 255, 255};
-    SDL_Surface *surface = TTF_RenderText_Blended(font, "OUT TO LUNCH", white);
+    SDL_Surface *surface = TTF_RenderText_Blended(font, message, white);
     if (!surface) {
         SDL_Log("TTF_RenderText_Blended Error: %s", TTF_GetError());
         TTF_CloseFont(font);
