@@ -41,7 +41,7 @@ typedef struct Ball {
     SDL_Color color;
 } Ball;
 
-Ball balls[3];
+Ball balls[10];
 
 int main(int argc, char *argv[]) {
     int opt;
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
     int W, H;
     SDL_GetRendererOutputSize(renderer, &W, &H);
 
-    for(int i=0; i<3; i++) {
+    for(int i=0; i<10; i++) {
         balls[i].x = (float)(rand() % (W - 40));
         balls[i].y = (float)(rand() % (H - 40));
         balls[i].vx = (float)(rand() % 400 - 200);
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
         const float dt = 0.016f; // ~60fps
         int ball_size = 40;
 
-        for(int i=0; i<3; i++) {
+        for(int i=0; i<10; i++) {
             balls[i].x += balls[i].vx * dt * speed_mult;
             balls[i].y += balls[i].vy * dt * speed_mult;
 
@@ -147,8 +147,8 @@ int main(int argc, char *argv[]) {
         }
 
         // Ball-ball collisions
-        for(int i=0; i<3; i++) {
-            for(int j=i+1; j<3; j++) {
+        for(int i=0; i<10; i++) {
+            for(int j=i+1; j<10; j++) {
                 Ball *b1 = &balls[i];
                 Ball *b2 = &balls[j];
                 float dx = b2->x - b1->x;
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Render balls
-        for(int i=0; i<3; i++) {
+        for(int i=0; i<10; i++) {
             int ix = (int)balls[i].x;
             int iy = (int)balls[i].y;
             int center_x = ix + 20;
