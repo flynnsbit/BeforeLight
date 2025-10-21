@@ -20,7 +20,10 @@ warp: main_warp.c
 toastersaver: main_toaster.c
 	$(CC) $(CFLAGS) -o build/toastersaver main_toaster.c $(LDFLAGS)
 
-all: fishsaver hardrain bouncingball globe warp toastersaver
+messages: main_messages.c
+	$(CC) $(CFLAGS) -o build/messages main_messages.c $(LDFLAGS) -lSDL2_ttf
+
+all: fishsaver hardrain bouncingball globe warp toastersaver messages
 
 clean:
 	rm -f build/*
