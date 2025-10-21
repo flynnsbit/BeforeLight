@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
         // Animate horizontal marquee
         float cycle = fmodf(time_s, 10.0f);
         float progress = cycle / 10.0f; // 0 to 1
-        int dst_x = (int)(W * (1.0f - progress)) - text_w / 2; // From W to -text_w/2
+        int dst_x = (int)(W * (1.0f - progress)) - text_w; // From W to -text_w (complete off-screen exit)
 
         // Animate vertical steps
         float step_cycle = fmodf(time_s, 30.0f);
