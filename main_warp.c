@@ -97,15 +97,23 @@ int main(int argc, char *argv[]) {
     }
 
     // Warp layer data: {tex_index, delay_seconds}
-    int warp_layers[9][2] = {
-        {0, 0},   // stars1 delay 0
-        {1, 500}, // stars2 delay 0.5
-        {2, 1000}, // stars3 delay 1
-        {3, 1500}, // stars4 delay 1.5
+    int warp_layers[18][2] = {
+        {0, 0},    // stars1 delay 0
+        {1, 250},  // stars2 delay 0.25
+        {2, 500},  // stars3 delay 0.5
+        {3, 750},  // stars4 delay 0.75
+        {0, 1000}, // stars1 delay 1
+        {1, 1250}, // stars2 delay 1.25
+        {2, 1500}, // stars3 delay 1.5
+        {3, 1750}, // stars4 delay 1.75
         {0, 2000}, // stars1 delay 2
-        {1, 2500}, // stars2 delay 2.5
-        {2, 3000}, // stars3 delay 3
-        {3, 3500}, // stars4 delay 3.5
+        {1, 2250}, // stars2 delay 2.25
+        {2, 2500}, // stars3 delay 2.5
+        {3, 2750}, // stars4 delay 2.75
+        {0, 3000}, // stars1 delay 3
+        {1, 3250}, // stars2 delay 3.25
+        {2, 3500}, // stars3 delay 3.5
+        {3, 3750}, // stars4 delay 3.75
         {0, 4000}  // stars1 delay 4
     };
 
@@ -128,7 +136,7 @@ int main(int argc, char *argv[]) {
         SDL_RenderClear(renderer);
 
         // Render warp starfields
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 18; i++) {
             int tex_idx = warp_layers[i][0];
             float delay_ms = warp_layers[i][1] / 1000.0f;
             float local_time = fmodf(time_ms - delay_ms, 2.0f);
