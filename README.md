@@ -66,28 +66,41 @@ sudo apt-get install libsdl2-dev libsdl2-image-dev libsdl2-gfx-dev
 make all  # Builds fishsaver, hardrain, bouncingball, toastersaver
 ```
 
+### Quick Build
+```bash
+make all  # Build all screensavers to build/ directory
+```
+
 ### Individual Builds
 ```bash
 # Fish Aquarium
-gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -o fishsaver main_fish.c
+gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/fishsaver main_fish.c
 
 # Hard Rain
-gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -o hardrain main_hard_rain.c
+gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/hardrain main_hard_rain.c
 
 # Bouncing Balls
-gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -o bouncingball main_bouncing_ball.c
+gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/bouncingball main_bouncing_ball.c
+
+# Globe
+gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/globe main_globe.c
+
+# Warp
+gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/warp main_warp.c
 
 # Flying Toasters
-gcc -Wall -Wextra `sdl2-config --cflags --libs` main.c -o toastersaver
+gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/toastersaver main_toaster.c
 ```
 
 ### Run
 
 ```bash
 # Start your favorite screensaver
-./fishsaver -f 1    # Fullscreen aquarium
-./hardrain -s 2     # Fast rain
-./bouncingball      # Windowed physics balls
+./build/fishsaver -f 1    # Fullscreen aquarium
+./build/hardrain -s 2     # Fast rain
+./build/bouncingball      # Windowed physics balls
+./build/globe -f 1        # Bouncing planet
+./build/warp -f 1         # Cosmic tunnel
 
 # Exit: Press ESC, Q, or click inside window
 ```
