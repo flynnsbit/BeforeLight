@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
     SDL_Texture *star_texs[4];
     for (int i = 0; i < 4; i++) {
         char path[20];
-        sprintf(path, "img/stars%d.png", i + 1);
+        sprintf(path, "../img/stars%d.png", i + 1);
         SDL_Surface *surf = IMG_Load(path);
         if (!surf) {
             SDL_Log("Error loading %s: %s", path, IMG_GetError());

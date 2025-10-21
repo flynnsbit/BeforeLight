@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
     SDL_Texture *fish_texs[10], *bg_tex, *bubble_tex;
     SDL_Surface *surf;
     int bg_w = 0, bg_h = 0;
-    const char *fish_names[10] = {"img/fish-angel.png", "img/fish-butterfly.png", "img/fish-flounder.png", "img/fish-guppy.png", "img/fish-jelly.png", "img/fish-minnow.png", "img/fish-red.png", "img/fish-seahorse.png", "img/fish-sprite.png", "img/fish-striped.png"};
+    const char *fish_names[10] = {"../img/fish-angel.png", "../img/fish-butterfly.png", "../img/fish-flounder.png", "../img/fish-guppy.png", "../img/fish-jelly.png", "../img/fish-minnow.png", "../img/fish-red.png", "../img/fish-seahorse.png", "../img/fish-sprite.png", "../img/fish-striped.png"};
     for (int i = 0; i < 10; i++) {
         surf = IMG_Load(fish_names[i]);
         if (!surf) {
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Background seabed
-    surf = IMG_Load("img/seafloor.jpg");
+    surf = IMG_Load("../img/seafloor.jpg");
     if (!surf) {
         SDL_Log("Error loading seafloor.jpg: %s", IMG_GetError());
         // Skip background
@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Bubbles
-    surf = IMG_Load("img/bubbles_50.png");
+    surf = IMG_Load("../img/bubbles_50.png");
     if (!surf) {
         SDL_Log("Error loading bubbles_50.png: %s", IMG_GetError());
         SDL_DestroyRenderer(renderer);

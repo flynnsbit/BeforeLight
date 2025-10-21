@@ -63,6 +63,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Change to project root directory for consistent relative path resolution
+    chdir("..");
+
     SDL_Window *window = SDL_CreateWindow("Globe", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
     if (window == NULL) {
         SDL_Log("SDL_CreateWindow Error: %s", SDL_GetError());

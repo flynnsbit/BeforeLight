@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
     SDL_GetRendererOutputSize(renderer, &W, &H);
 
     // Load textures
-    SDL_Surface *surf = IMG_Load("img/toaster-sprite.gif");
+    SDL_Surface *surf = IMG_Load("../img/toaster-sprite.gif");
     if (!surf) {
         SDL_Log("Error loading toaster-sprite.gif: %s", IMG_GetError());
         SDL_DestroyRenderer(renderer);
@@ -230,7 +230,7 @@ int main(int argc, char *argv[]) {
     SDL_Texture *toast_texs[4];
     for (int i = 0; i < 4; i++) {
         char buf[25];
-        sprintf(buf, "img/toast%d.gif", i);
+        sprintf(buf, "../img/toast%d.gif", i);
         surf = IMG_Load(buf);
         if (!surf) {
             SDL_Log("Error loading %s: %s", buf, IMG_GetError());
