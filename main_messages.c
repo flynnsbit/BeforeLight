@@ -16,7 +16,7 @@ static void usage(const char *prog) {
     fprintf(stderr, "  -s F    Speed multiplier (default: 1.0)\n");
     fprintf(stderr, "  -f 0|1  Fullscreen (1=yes, 0=windowed) (default: 1)\n");
     fprintf(stderr, "  -t STR  Message text (default: 'OUT TO LUNCH')\n");
-    fprintf(stderr, "  -r      Random quote from internet (requires curl & jq)\n");
+    fprintf(stderr, "  -r      Random quote from internet (requires curl)\n");
     fprintf(stderr, "  -h      Show this help\n");
 }
 
@@ -55,17 +55,24 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
 
     if (random_mode) {
-        FILE *fp = popen("curl -s https://api.quotable.io/random | jq -r .content 2>/dev/null", "r");
+        FILE *fp = popen("curl -s https://api.quotable.io/random | grep '\"content\"' | cut -d'\"' -f4", "r");
         if (fp) {
-            char *newline;
             if (fgets(message_text, sizeof(message_text), fp)) {
-                if ((newline = strchr(message_text, '\n'))) *newline = '\0';
+                char *newline = strchr(message_text, '\n');
+                if (newline) *newline = '\0';
+                if (strlen(message_text) > 0) {
+                    message = message_text;
+                }
+            }
+            int status = pclose(fp);
+            if (status != 0) {
+                // Command failed, keep default
                 message = message_text;
             }
-            pclose(fp);
+        } else {
+            // popen failed, keep default
+            message = message_text;
         }
-        // Fall back to default if fetch failed
-        message = message_text;
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
