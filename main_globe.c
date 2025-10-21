@@ -153,7 +153,10 @@ int main(int argc, char *argv[]) {
         if (src_x < 0) src_x = 0;
 
         SDL_Rect src_rect = {src_x, 0, 240, 240};
-        SDL_Rect dst_rect = {(int)x, (int)y, 240, 240};
+        // Render smaller to simulate border-radius circular clipping
+        int display_size = 210;
+        int offset = (240 - display_size) / 2;
+        SDL_Rect dst_rect = {(int)x + offset, (int)y + offset, display_size, display_size};
         SDL_RenderCopy(renderer, globe_tex, &src_rect, &dst_rect);
 
 
