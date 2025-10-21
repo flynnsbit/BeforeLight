@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h> // for getopt
+#include <stdio.h>
+#include <string.h>
 
 extern char *optarg;
 
@@ -14,6 +16,7 @@ static void usage(const char *prog) {
     fprintf(stderr, "  -s F    Speed multiplier (default: 1.0)\n");
     fprintf(stderr, "  -f 0|1  Fullscreen (1=yes, 0=windowed) (default: 1)\n");
     fprintf(stderr, "  -t STR  Message text (default: 'OUT TO LUNCH')\n");
+    fprintf(stderr, "  -r      Random quote from internet (requires curl & jq)\n");
     fprintf(stderr, "  -h      Show this help\n");
 }
 
@@ -21,9 +24,11 @@ int main(int argc, char *argv[]) {
     int opt;
     float speed_mult = 1.0f;
     int do_fullscreen = 1;
-    const char *message = "OUT TO LUNCH";
+    char message_text[1024] = "OUT TO LUNCH";
+    int random_mode = 0;
+    const char *message = message_text;
 
-    while ((opt = getopt(argc, argv, "s:f:t:h")) != -1) {
+    while ((opt = getopt(argc, argv, "s:f:t:rh")) != -1) {
         switch (opt) {
             case 's':
                 speed_mult = atof(optarg);
@@ -34,7 +39,10 @@ int main(int argc, char *argv[]) {
                 do_fullscreen = atoi(optarg);
                 break;
             case 't':
-                message = optarg;
+                strcpy(message_text, optarg);
+                break;
+            case 'r':
+                random_mode = 1;
                 break;
             case 'h':
             default:
@@ -45,6 +53,20 @@ int main(int argc, char *argv[]) {
 
     // Removed setenv for style testing
     srand(time(NULL));
+
+    if (random_mode) {
+        FILE *fp = popen("curl -s https://api.quotable.io/random | jq -r .content 2>/dev/null", "r");
+        if (fp) {
+            char *newline;
+            if (fgets(message_text, sizeof(message_text), fp)) {
+                if ((newline = strchr(message_text, '\n'))) *newline = '\0';
+                message = message_text;
+            }
+            pclose(fp);
+        }
+        // Fall back to default if fetch failed
+        message = message_text;
+    }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         SDL_Log("SDL_Init Error: %s", SDL_GetError());
