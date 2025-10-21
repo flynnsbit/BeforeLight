@@ -34,6 +34,87 @@ void drawCircleOutline(SDL_Renderer *renderer, int centerX, int centerY, int rad
 static void usage(const char *prog) {
     fprintf(stderr, "Usage: %s [options]\n", prog);
     fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -t N    Number of toasters (default: all)\n");
+    fprintf(stderr, "  -m N    Number of toast pieces (default: all)\n");
+    fprintf(stderr, "  -s F    Speed multiplier (default: 1.0)\n");
+    fprintf(stderr, "  -f 0|1  Fullscreen (1=yes, 0=windowed) (default: 1)\n");
+    fprintf(stderr, "  -h      Show this help\n");
+}
+
+struct Pos {
+    float top_pct, left_pct;
+};
+
+typedef struct Entity {
+    int anim_type;
+    int pos_index;
+    int toast_type;
+} Entity;
+
+SDL_Window *window = SDL_CreateWindow("Hard Rain", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
+    if (window == NULL) {
+        SDL_Log("SDL_CreateWindow Error: %s", SDL_GetError());
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
+    }
+
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (renderer == NULL) {
+        SDL_Log("SDL_CreateRenderer Error: %s", SDL_GetError());
+        SDL_DestroyWindow(window);
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
+    }
+
+    if (do_fullscreen) {
+        if (SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) != 0) {
+            SDL_Log("Warning: Failed to set fullscreen: %s", SDL_GetError());
+        }
+    }
+
+    int W, H;
+    SDL_GetRendererOutputSize(renderer, &W, &H);
+
+    struct Pos poses[10];
+    Entity entities[10];
+
+    SDL_Color rain_colors[8] = {
+        {0x00, 0x00, 0x6e, 255}, // dkblue
+        {0xc8, 0xd3, 0x54, 255}, // lime
+        {0xc2, 0xc2, 0xc2, 255}, // ltgray
+        {0x86, 0x1f, 0x23, 255}, // red
+        {0x45, 0xa0, 0xcc, 255}, // ltblue
+        {0x9a, 0x33, 0x68, 255}, // pink
+        {0xef, 0xda, 0x1d, 255}, // yellow
+        {0x39, 0x71, 0x32, 255}  // green
+    };
+
+    for(int i=0; i<10; i++) {
+        poses[i] = (struct Pos){rand() % 100, rand() % 100};
+        entities[i] = (Entity){rand() % 100, i, rand() % 8};
+    }
+
+void drawCircleOutline(SDL_Renderer *renderer, int centerX, int centerY, int radius, SDL_Color color) {
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    int inner_radius = radius - 1; // 1 pixel thick ring
+    for (int y = centerY - radius; y <= centerY + radius; y++) {
+        int dy = y - centerY;
+        int dy_squared = dy * dy;
+        int dx_outer_squared = radius * radius - dy_squared;
+        if (dx_outer_squared > 0) {
+            int dx_outer = (int)sqrtf(dx_outer_squared);
+            int dx_inner = (inner_radius > 0 && dy_squared < inner_radius * inner_radius) ? (int)sqrtf(inner_radius * inner_radius - dy_squared) : 0;
+            SDL_RenderDrawLine(renderer, centerX - dx_outer, y, centerX - dx_inner, y);
+            SDL_RenderDrawLine(renderer, centerX + dx_inner, y, centerX + dx_outer, y);
+        }
+    }
+}
+
+static void usage(const char *prog) {
+    fprintf(stderr, "Usage: %s [options]\n", prog);
+    fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -s F    Speed multiplier (default: 1.0)\n");
     fprintf(stderr, "  -f 0|1  Fullscreen (1=yes, 0=windowed) (default: 1)\n");
     fprintf(stderr, "  -h      Show this help\n");
