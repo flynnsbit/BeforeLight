@@ -24,7 +24,16 @@
 - **Pixel-perfect circular rendering**
 - **Runtime Controls**: Speed multiplier (`--s`)
 
-### 🏀 Bouncing Balls
+### � Globe
+*Bouncing spinning planet Earth*
+
+- **240px animated globe** bouncing across screen edges
+- **Spinning world map** with 21-frame rotation animation
+- **Bounces in all directions** (right-left, bottom-top)
+- **Sprite-sheet rendering** for smooth planetary rotation
+- **Runtime Controls**: Speed multiplier (`--s`)
+
+### �🏀 Bouncing Balls
 *Full physics particle simulation*
 
 - **10 colorful balls** with elastic collisions
