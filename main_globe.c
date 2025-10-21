@@ -119,6 +119,7 @@ int main(int argc, char *argv[]) {
         }
 
         Uint32 current_time = SDL_GetTicks();
+        float time_s = (current_time - start_time) / 1000.0f;
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
         SDL_RenderClear(renderer);
@@ -134,8 +135,18 @@ int main(int argc, char *argv[]) {
         if (y < 0) { y = 0; vy = -vy; }
         else if (y > H - ball_size) { y = H - ball_size; vy = -vy; }
 
-        // Render static globe
-        SDL_Rect src_rect = {0, 0, 240, 240};
+        // Globe spin animation using toaster sprite code logic
+        const float total_spin_time = 1.4f; // Match CSS spin duration
+        float local_turn = fmod(time_s, total_spin_time);
+        float turn_phase = local_turn / total_spin_time;
+        int flap_frame = (int)(turn_phase * 21) % 21; // 21 frames
+        int flap_cycle = 21; // For formula
+        // Clamp
+        if (flap_frame < 0) flap_frame = 0;
+        if (flap_frame > 20) flap_frame = 20;
+
+        // Render spinning globe
+        SDL_Rect src_rect = {flap_frame * 240, 0, 240, 240};
         SDL_Rect dst_rect = {(int)x, (int)y, 240, 240};
         SDL_RenderCopy(renderer, globe_tex, &src_rect, &dst_rect);
 
