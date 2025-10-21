@@ -125,8 +125,8 @@ int main(int argc, char *argv[]) {
         float max_left = W - ball_size;
         float max_top = H - ball_size;
 
-        // X animation: 3s alternate
-        float phase_x = time_s / 3.0f;
+        // X animation: 3s alternate (scaled by speed_mult)
+        float phase_x = time_s * speed_mult / 3.0f;
         float cycle_x = floorf(phase_x);
         float frac_x = phase_x - cycle_x;
         float x;
@@ -136,8 +136,8 @@ int main(int argc, char *argv[]) {
             x = 0 + frac_x * max_left; // left to right
         }
 
-        // Y animation: 3.4s alternate (bottom to top)
-        float phase_y = time_s / 3.4f;
+        // Y animation: 3.4s alternate (bottom to top, scaled by speed_mult)
+        float phase_y = time_s * speed_mult / 3.4f;
         float cycle_y = floorf(phase_y);
         float frac_y = phase_y - cycle_y;
         float y;
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Spin animation: 1.4s steps(21) background-position -5040 to 0
-        float spin_phase = fmod(time_s, 1.4f) / 1.4f;
+        float spin_phase = fmod(time_s * speed_mult, 1.4f) / 1.4f;
         int src_x = (int)(5040.0f - spin_phase * 5040.0f);
         if (src_x < 0) src_x = 0;
 
