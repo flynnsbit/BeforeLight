@@ -140,7 +140,6 @@ int main(int argc, char *argv[]) {
         float local_turn = fmod(time_s, total_spin_time);
         float turn_phase = local_turn / total_spin_time;
         int flap_frame = (int)(turn_phase * 21) % 21; // 21 frames
-        int flap_cycle = 21; // For formula
         // Clamp
         if (flap_frame < 0) flap_frame = 0;
         if (flap_frame > 20) flap_frame = 20;
