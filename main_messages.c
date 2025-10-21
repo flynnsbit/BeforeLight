@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 
     // Render text
     SDL_Color white = {255, 255, 255, 255};
-    SDL_Surface *surface = TTF_RenderText_Blended(font, "OUT TO LUNCH   OUT TO LUNCH   OUT TO LUNCH   OUT TO LUNCH   ", white);
+    SDL_Surface *surface = TTF_RenderText_Blended(font, "OUT TO LUNCH", white);
     if (!surface) {
         SDL_Log("TTF_RenderText_Blended Error: %s", TTF_GetError());
         TTF_CloseFont(font);
@@ -151,16 +151,16 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
         SDL_RenderClear(renderer);
 
-        // Animate marquee
+        // Animate horizontal marquee
         float cycle = fmodf(time_s, 10.0f);
-        float indent = 100 - (100 + 150) * (cycle / 10.0f); // 100% to -150%
+        float progress = cycle / 10.0f; // 0 to 1
+        int dst_x = (int)(W * (1.0f - progress)) - text_w / 2; // From W to -text_w/2
 
         // Animate vertical steps
         float step_cycle = fmodf(time_s, 30.0f);
         int step = (int)floor(step_cycle / (30.0f / 3.0f)); // 0, 1, 2
         float y_pct = 0.2 + (0.8 / 3.0f) * step;
 
-        int dst_x = (int)((indent / 100.0f) * W) - text_w / 2;
         int dst_y = (int)(y_pct * H) - text_h / 2;
 
         SDL_Rect dst_rect = {dst_x, dst_y, text_w, text_h};
