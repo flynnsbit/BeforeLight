@@ -102,6 +102,10 @@ int main(int argc, char *argv[]) {
     globe_tex = SDL_CreateTextureFromSurface(renderer, surf);
     SDL_FreeSurface(surf);
 
+    // Initialize globe physics
+    float x = 100, y = 100, vx = 200, vy = 150;
+    int ball_size = 240;
+
     // Main loop
     SDL_Event e;
     int quit = 0;
@@ -115,48 +119,24 @@ int main(int argc, char *argv[]) {
         }
 
         Uint32 current_time = SDL_GetTicks();
-        float time_s = (current_time - start_time) / 1000.0f;
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
         SDL_RenderClear(renderer);
 
-        // Globe bouncing animation
-        float ball_size = 240.0f;
-        float max_left = W - ball_size;
-        float max_top = H - ball_size;
+        // Update physics
+        const float dt = 0.016f;
+        x += vx * dt * speed_mult;
+        y += vy * dt * speed_mult;
 
-        // X animation: 3s alternate
-        float phase_x = time_s / 3.0f;
-        float cycle_x = floorf(phase_x);
-        float frac_x = phase_x - cycle_x;
-        float x;
-        if ((int)cycle_x % 2 == 0) {
-            x = max_left - frac_x * max_left; // right to left
-        } else {
-            x = 0 + frac_x * max_left; // left to right
-        }
+        // Wall collisions
+        if (x < 0) { x = 0; vx = -vx; }
+        else if (x > W - ball_size) { x = W - ball_size; vx = -vx; }
+        if (y < 0) { y = 0; vy = -vy; }
+        else if (y > H - ball_size) { y = H - ball_size; vy = -vy; }
 
-        // Y animation: 3.4s alternate (bottom to top)
-        float phase_y = time_s / 3.4f;
-        float cycle_y = floorf(phase_y);
-        float frac_y = phase_y - cycle_y;
-        float y;
-        if ((int)cycle_y % 2 == 0) {
-            y = max_top - frac_y * max_top; // bottom to top
-        } else {
-            y = 0 + frac_y * max_top; // top to bottom
-        }
-
-        // Spin animation: 1.4s steps(21) background-position -5040 to 0
-        float spin_phase = fmod(time_s, 1.4f) / 1.4f;
-        int src_x = (int)(5040.0f - spin_phase * 5040.0f);
-        if (src_x < 0) src_x = 0;
-
-        SDL_Rect src_rect = {src_x, 0, 240, 240};
-        // Render smaller to simulate border-radius circular clipping
-        int display_size = 210;
-        int offset = (240 - display_size) / 2;
-        SDL_Rect dst_rect = {(int)x + offset, (int)y + offset, display_size, display_size};
+        // Render static globe
+        SDL_Rect src_rect = {0, 0, 240, 240};
+        SDL_Rect dst_rect = {(int)x, (int)y, 240, 240};
         SDL_RenderCopy(renderer, globe_tex, &src_rect, &dst_rect);
 
 
