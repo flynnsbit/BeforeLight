@@ -188,17 +188,13 @@ int main(int argc, char *argv[]) {
         Uint32 current_time = SDL_GetTicks();
         float time_s = (current_time - start_time) / 1000.0f;
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
-        SDL_RenderClear(renderer);
-
-        // Animate horizontal marquee with constant speed and complete off-screen exit
-        float text_ratio = text_w / (float)W;
-        float scroll_time = 12.0f * (1.0f + text_ratio); // Adjust time for complete scroll distance + brief pause
+        // Animate horizontal marquee with constant speed
+        float scroll_time = 10.0f;
         float cycle = fmodf(time_s, scroll_time);
         float progress = cycle / scroll_time; // 0 to 1
-        int dst_x = (int)(W - (W + text_w) * progress); // Constant speed, complete off-screen exit
+        int dst_x = (int)(W - W * progress); // Constant speed W/10 pixels/second
 
-        // Update quote after each complete cycle if random mode
+        // Update quote every 10 seconds if random mode
         if (random_mode && fmodf(time_s, scroll_time) < 0.016f) {
             FILE *fp = popen("curl -s http://api.quotable.io/random | sed 's/.*\"content\":\"//' | sed 's/\",\"author.*//'", "r");
             if (fp) {
