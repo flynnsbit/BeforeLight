@@ -1,8 +1,8 @@
 #include <SDL.h>
-#include <SDL_image.h>
 #include <time.h>
 #include <stdlib.h>
 #include <unistd.h> // for getopt
+#include <math.h>
 
 extern char *optarg;
 
@@ -43,20 +43,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (!(IMG_Init(IMG_INIT_PNG))) {
-        SDL_Log("IMG_Init Error: %s", IMG_GetError());
-        SDL_Quit();
-        return 1;
-    }
-
-    // Change to img directory
-    chdir("..");
-    chdir("img");
-
     SDL_Window *window = SDL_CreateWindow("Rainstorm", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
     if (window == NULL) {
         SDL_Log("SDL_CreateWindow Error: %s", SDL_GetError());
-        IMG_Quit();
         SDL_Quit();
         return 1;
     }
@@ -65,7 +54,6 @@ int main(int argc, char *argv[]) {
     if (renderer == NULL) {
         SDL_Log("SDL_CreateRenderer Error: %s", SDL_GetError());
         SDL_DestroyWindow(window);
-        IMG_Quit();
         SDL_Quit();
         return 1;
     }
@@ -79,45 +67,22 @@ int main(int argc, char *argv[]) {
     int W, H;
     SDL_GetRendererOutputSize(renderer, &W, &H);
 
-    // Load rain layer textures
-    SDL_Surface *surf_near = IMG_Load("rain-tile-near.png");
-    SDL_Surface *surf_mid = IMG_Load("rain-tile-mid.png");
-    SDL_Surface *surf_far = IMG_Load("rain-tile-distant.png");
-
-    int tile_w = surf_near->w, tile_h = surf_near->h;
-    SDL_Texture *tex_near = SDL_CreateTextureFromSurface(renderer, surf_near);
-    SDL_Texture *tex_mid = SDL_CreateTextureFromSurface(renderer, surf_mid);
-    SDL_Texture *tex_far = SDL_CreateTextureFromSurface(renderer, surf_far);
-    SDL_FreeSurface(surf_near);
-    SDL_FreeSurface(surf_mid);
-    SDL_FreeSurface(surf_far);
-
-    // Rain droplet data
-    #define MAX_DROPS 200
+    // Rain droplet data - single layer, full screen
+    #define MAX_DROPS 150
     struct drop {
-        float x, vy;
-        int z_layer; // 0=near, 1=mid, 2=far
+        float x, y;
     };
     struct drop drops[MAX_DROPS];
 
-    // Initialize drops
+    // Initialize drops from top
     for (int i = 0; i < MAX_DROPS; i++) {
         drops[i].x = rand() % W;
-        drops[i].vy = 200 + rand() % 200;
-        drops[i].z_layer = rand() % 3;
+        drops[i].y = (float)(rand() % H);  // Start at random Y from top
     }
-
-    // Scrolling background positions
-    float bg_near_x = 0, bg_mid_x = 0, bg_far_x = 0;
-    float wind_speed_near = 60, wind_speed_mid = 40, wind_speed_far = 20;
-
-    // Lightning flash
-    int lightning_flash = 0, lightning_timer = 0;
 
     // Main loop
     SDL_Event e;
     int quit = 0;
-    Uint32 start_time = SDL_GetTicks();
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -126,83 +91,30 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        Uint32 current_time = SDL_GetTicks();
-        float time_s = (current_time - start_time) / 1000.0f;
-
-        // Update background scroll positions
-        bg_near_x += wind_speed_near * speed_mult * 0.016f;
-        bg_mid_x += wind_speed_mid * speed_mult * 0.016f;
-        bg_far_x += wind_speed_far * speed_mult * 0.016f;
-
-        // Wrap backgrounds
-        if (bg_near_x >= W) bg_near_x -= W;
-        if (bg_mid_x >= W) bg_mid_x -= W;
-        if (bg_far_x >= W) bg_far_x -= W;
-
-        // Update drops
+        // Update drops - continuous fall with 15 deg slant
         for (int i = 0; i < MAX_DROPS; i++) {
-            drops[i].vy += 20 * speed_mult; // gravity
-            drops[i].x += (drops[i].z_layer == 0 ? wind_speed_near * 0.5f :
-                          drops[i].z_layer == 1 ? wind_speed_mid * 0.3f : wind_speed_far * 0.2f) * speed_mult * 0.016f;
+            drops[i].y += 8.0f * speed_mult;  // Fall speed
+            drops[i].x += (int)(8.0f * speed_mult * 0.268f);  // tan(15°) ≈ 0.268 for slant
 
-            // Respawn at top if off screen
-            if (drops[i].x > W + 10 || drops[i].x < -10) {
+            // Respawn at top when off bottom
+            if (drops[i].y > H + 20) {
                 drops[i].x = rand() % W;
-                drops[i].vy = 200 + rand() % 200;
+                drops[i].y = -10;
             }
-            if (drops[i].vy > H * 2) {
-                drops[i].x = rand() % W;
-                drops[i].vy = 200 + rand() % 200;
-            }
-        }
-
-        // Lightning occasionally (more random, less frequent)
-        if (rand() % 4000 < 5 && !lightning_flash) {
-            lightning_flash = rand() % 100 + 50; // Flash frames
-        }
-        if (lightning_flash > 0) {
-            lightning_flash--;
         }
 
         // Render
-        SDL_SetRenderDrawColor(renderer,
-            lightning_flash > 0 ? 200 : 50,
-            lightning_flash > 0 ? 220 : 60,
-            lightning_flash > 0 ? 255 : 80, 255);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
         SDL_RenderClear(renderer);
 
-        // Draw background layers (tiled scrolling)
-        SDL_Rect bg_rect;
-        bg_rect.w = tile_w;
-        bg_rect.h = tile_h;
-        bg_rect.y = H - tile_h;
-        bg_rect.x = -W + (int)bg_far_x; SDL_RenderCopy(renderer, tex_far, NULL, &bg_rect);
-        bg_rect.x = (int)bg_far_x; SDL_RenderCopy(renderer, tex_far, NULL, &bg_rect);
-        bg_rect.x = W + (int)bg_far_x; SDL_RenderCopy(renderer, tex_far, NULL, &bg_rect);
-
-        bg_rect.y = H - tile_h * 2;
-        bg_rect.x = -W + (int)bg_mid_x; SDL_RenderCopy(renderer, tex_mid, NULL, &bg_rect);
-        bg_rect.x = (int)bg_mid_x; SDL_RenderCopy(renderer, tex_mid, NULL, &bg_rect);
-        bg_rect.x = W + (int)bg_mid_x; SDL_RenderCopy(renderer, tex_mid, NULL, &bg_rect);
-
-        bg_rect.y = H - tile_h * 3;
-        bg_rect.x = -W + (int)bg_near_x; SDL_RenderCopy(renderer, tex_near, NULL, &bg_rect);
-        bg_rect.x = (int)bg_near_x; SDL_RenderCopy(renderer, tex_near, NULL, &bg_rect);
-        bg_rect.x = W + (int)bg_near_x; SDL_RenderCopy(renderer, tex_near, NULL, &bg_rect);
-
-        // Draw drops at 5-degree angle
-        const float angle_tan = 0.0871557f; // tan(5 degrees)
-        SDL_SetRenderDrawColor(renderer, 180, 220, 255, 150);
+        // Draw angled rain drops (white lines from top to bottom)
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 180);
         for (int i = 0; i < MAX_DROPS; i++) {
-            if (drops[i].vy < H) {
-                int alpha = 255 - (drops[i].vy / H) * 128; // Fade near bottom
-                SDL_SetRenderDrawColor(renderer, 150, 200, 255, alpha < 0 ? 0 : alpha);
-                int drop_length = (drops[i].z_layer == 0 ? 10 : 5);
-                int dx = (int)(drop_length * angle_tan);
-                int dy = drop_length;
-                SDL_RenderDrawLine(renderer, (int)drops[i].x, (int)(drops[i].vy) % H,
-                                  (int)drops[i].x + dx, (int)(drops[i].vy + dy) % H);
-            }
+            int length = 15;
+            float tan15 = 0.268f; // tan(15°)
+            int dx = (int)(length * tan15);
+            SDL_RenderDrawLine(renderer, (int)drops[i].x, (int)drops[i].y,
+                              (int)drops[i].x + dx, (int)drops[i].y + length);
         }
 
         SDL_RenderPresent(renderer);
@@ -210,12 +122,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Cleanup
-    SDL_DestroyTexture(tex_near);
-    SDL_DestroyTexture(tex_mid);
-    SDL_DestroyTexture(tex_far);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    IMG_Quit();
     SDL_Quit();
     return 0;
 }
