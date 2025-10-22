@@ -26,7 +26,10 @@ messages: main_messages.c
 messages2: main_messages2.c
 	$(CC) $(CFLAGS) -o build/messages2 main_messages2.c $(LDFLAGS) -lSDL2_ttf
 
-all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2
+logo: main_logo.c
+	$(CC) $(CFLAGS) -o build/logo main_logo.c $(LDFLAGS)
+
+all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo
 
 clean:
 	rm -f build/*
