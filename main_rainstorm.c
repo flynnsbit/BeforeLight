@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 
     // Initialize drops with extended horizontal coverage for angled rain
     for (int i = 0; i < MAX_DROPS; i++) {
-        drops[i].x = (rand() % (W + 200)) - 100; // Extended left coverage for full bottom surface
+        drops[i].x = (rand() % (W + 220)) - 110; // 10% additional coverage beyond borders
         drops[i].y = (float)(rand() % H);  // Start at random Y for distribution
     }
 
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
 
             // Respawn at top when off bottom with extended coverage
             if (drops[i].y > H + 20) {
-                drops[i].x = (rand() % (W + 200)) - 100; // Match extended coverage
+                drops[i].x = (rand() % (W + 220)) - 110; // 10% additional coverage
                 drops[i].y = -10;
             }
         }
