@@ -146,26 +146,32 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Render text
-    SDL_Color white = {255, 255, 255, 255};
-    SDL_Surface *surface = TTF_RenderText_Blended(font, message, white);
-    if (!surface) {
-        SDL_Log("TTF_RenderText_Blended Error: %s", TTF_GetError());
-        TTF_CloseFont(font);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        TTF_Quit();
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
+    SDL_Texture *text_texture = NULL;
+    int text_w = 0, text_h = 0;
+
+    // Function to update text display
+    void update_text_texture(const char *text) {
+        // Clear any existing texture
+        if (text_texture) {
+            SDL_DestroyTexture(text_texture);
+            text_texture = NULL;
+        }
+
+        SDL_Color white = {255, 255, 255, 255};
+        SDL_Surface *surface = TTF_RenderText_Blended(font, text, white);
+        if (!surface) {
+            SDL_Log("TTF_RenderText_Blended Error: %s", TTF_GetError());
+            return;
+        }
+
+        text_texture = SDL_CreateTextureFromSurface(renderer, surface);
+        text_w = surface->w;
+        text_h = surface->h;
+        SDL_FreeSurface(surface);
     }
 
-    int text_w = surface->w;
-    int text_h = surface->h;
-    SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
-    TTF_CloseFont(font);
-    TTF_Quit();
+    // Initial text render
+    update_text_texture(message);
 
     // Main loop
     SDL_Event e;
@@ -181,6 +187,21 @@ int main(int argc, char *argv[]) {
 
         Uint32 current_time = SDL_GetTicks();
         float time_s = (current_time - start_time) / 1000.0f;
+
+        // Update quote every 10 seconds (after each marquee cycle) if random mode
+        if (random_mode && fmodf(time_s, 10.0f) < 0.016f) {
+            FILE *fp = popen("curl -s http://api.quotable.io/random | sed 's/.*\"content\":\"//' | sed 's/\",\"author.*//'", "r");
+            if (fp) {
+                if (fgets(message_text, sizeof(message_text), fp)) {
+                    char *newline = strchr(message_text, '\n');
+                    if (newline) *newline = '\0';
+                    if (strlen(message_text) > 0 && strcmp(message_text, "OUT TO LUNCH") != 0) {
+                        update_text_texture(message_text);
+                    }
+                }
+                pclose(fp);
+            }
+        }
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
         SDL_RenderClear(renderer);
