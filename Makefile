@@ -23,7 +23,10 @@ toastersaver: main_toaster.c
 messages: main_messages.c
 	$(CC) $(CFLAGS) -o build/messages main_messages.c $(LDFLAGS) -lSDL2_ttf
 
-all: fishsaver hardrain bouncingball globe warp toastersaver messages
+messages2: main_messages2.c
+	$(CC) $(CFLAGS) -o build/messages2 main_messages2.c $(LDFLAGS) -lSDL2_ttf
+
+all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2
 
 clean:
 	rm -f build/*
