@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
     // Flash timing
     float next_flash_time = 4.0f + (rand() % 4); // 4-7 seconds
-    float flash_duration = 0.3f;
+    float flash_duration = 0.15f;
     float last_flash_time = -10.0f; // far past
     float current_flash_remaining = 0.0f;
 
