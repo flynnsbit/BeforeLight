@@ -220,8 +220,8 @@ int main(int argc, char *argv[]) {
 
         SDL_Rect dst_rect = {dst_x, dst_y, text_w, text_h};
 
-        // Only render if text is not completely off-screen left (whole text visible when right edge > 0)
-        if (dst_x + text_w > 0 && dst_x < W) {
+        // Only render if text is not completely off-screen left
+        if (dst_x > -text_w && dst_x < W) {
             SDL_RenderCopy(renderer, text_texture, NULL, &dst_rect);
         }
 
