@@ -96,6 +96,9 @@ int main(int argc, char *argv[]) {
     SDL_Texture *logo_tex = SDL_CreateTextureFromSurface(renderer, surf);
     SDL_FreeSurface(surf);
 
+    // Initialize bouncing physics for logo position
+    float x = W / 2.0f, y = H / 2.0f, vx = 150.0f, vy = 100.0f;
+
     // Normalize loop time (50 second cycle as per CSS)
     const float cycle_time = 50.0f;
 
@@ -124,11 +127,24 @@ int main(int argc, char *argv[]) {
         // Rotation
         float rotation = 360.0f * sinf(PI * cycle * 2.0f);  // Full rotations
 
-        // Compute final render scale and rotation
+        // Update bouncing physics for the scaled logo
+        const float dt = 0.016f;
+        x += vx * dt * speed_mult;
+        y += vy * dt * speed_mult;
+
+        int half_w = (int)(logo_w * scaleX) / 2;
+        int half_h = (int)(logo_h * scaleY) / 2;
+
+        if (x < half_w) { x = half_w; vx = -vx; }
+        if (x > W - half_w) { x = W - half_w; vx = -vx; }
+        if (y < half_h) { y = half_h; vy = -vy; }
+        if (y > H - half_h) { y = H - half_h; vy = -vy; }
+
+        // Compute render rect centered on bouncing position
         SDL_Point center = {logo_w / 2, logo_h / 2};
         SDL_Rect dst_rect = {
-            (W - (int)(logo_w * scaleX)) / 2,
-            (H - (int)(logo_h * scaleY)) / 2,
+            (int)x - (int)(logo_w * scaleX) / 2,
+            (int)y - (int)(logo_h * scaleY) / 2,
             (int)(logo_w * scaleX),
             (int)(logo_h * scaleY)
         };
