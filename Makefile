@@ -32,7 +32,10 @@ logo: main_logo.c
 rainstorm: main_rainstorm.c
 	$(CC) $(CFLAGS) -o build/rainstorm main_rainstorm.c $(LDFLAGS)
 
-all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm
+spotlight: main_spotlight.c
+	$(CC) $(CFLAGS) -o build/spotlight main_spotlight.c $(LDFLAGS)
+
+all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight
 
 clean:
 	rm -f build/*
