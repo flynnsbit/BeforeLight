@@ -206,10 +206,10 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
         SDL_RenderClear(renderer);
 
-        // Animate horizontal marquee (constant speed regardless of text length)
+        // Animate horizontal marquee (text scrolls completely off screen)
         float cycle = fmodf(time_s, 10.0f);
         float progress = cycle / 10.0f; // 0 to 1
-        int dst_x = (int)(W - W * progress); // Constant speed W/10 pixels/s for scroll motion
+        int dst_x = (int)(W - (W + text_w) * progress); // Complete off-screen exit at progress=1
 
         // Animate vertical steps
         float step_cycle = fmodf(time_s, 30.0f);
@@ -220,8 +220,8 @@ int main(int argc, char *argv[]) {
 
         SDL_Rect dst_rect = {dst_x, dst_y, text_w, text_h};
 
-        // Only render if partially visible (prevent wrapping)
-        if (dst_x > -text_w && dst_x < W) {
+        // Only render if text is not completely off-screen left (whole text visible when right edge > 0)
+        if (dst_x + text_w > 0 && dst_x < W) {
             SDL_RenderCopy(renderer, text_texture, NULL, &dst_rect);
         }
 
