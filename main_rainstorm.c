@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
     SDL_FreeSurface(surf_far);
 
     // Rain droplet data
-    #define MAX_DROPS 300
+    #define MAX_DROPS 200
     struct drop {
         float x, vy;
         int z_layer; // 0=near, 1=mid, 2=far
@@ -156,8 +156,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Lightning occasionally
-        if (rand() % 2000 == 0 && !lightning_flash) {
+        // Lightning occasionally (more random, less frequent)
+        if (rand() % 4000 < 5 && !lightning_flash) {
             lightning_flash = rand() % 100 + 50; // Flash frames
         }
         if (lightning_flash > 0) {
@@ -190,15 +190,18 @@ int main(int argc, char *argv[]) {
         bg_rect.x = (int)bg_near_x; SDL_RenderCopy(renderer, tex_near, NULL, &bg_rect);
         bg_rect.x = W + (int)bg_near_x; SDL_RenderCopy(renderer, tex_near, NULL, &bg_rect);
 
-        // Draw drops as simple lines
+        // Draw drops at 5-degree angle
+        const float angle_tan = 0.0871557f; // tan(5 degrees)
         SDL_SetRenderDrawColor(renderer, 180, 220, 255, 150);
         for (int i = 0; i < MAX_DROPS; i++) {
             if (drops[i].vy < H) {
                 int alpha = 255 - (drops[i].vy / H) * 128; // Fade near bottom
                 SDL_SetRenderDrawColor(renderer, 150, 200, 255, alpha < 0 ? 0 : alpha);
+                int drop_length = (drops[i].z_layer == 0 ? 10 : 5);
+                int dx = (int)(drop_length * angle_tan);
+                int dy = drop_length;
                 SDL_RenderDrawLine(renderer, (int)drops[i].x, (int)(drops[i].vy) % H,
-                                  (int)drops[i].x + (drops[i].z_layer == 0 ? 2 : 1),
-                                  (int)(drops[i].vy + (drops[i].z_layer == 0 ? 10 : 5)) % H);
+                                  (int)drops[i].x + dx, (int)(drops[i].vy + dy) % H);
             }
         }
 
