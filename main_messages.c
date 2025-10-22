@@ -188,23 +188,6 @@ int main(int argc, char *argv[]) {
         Uint32 current_time = SDL_GetTicks();
         float time_s = (current_time - start_time) / 1000.0f;
 
-        // Update quote every 10 seconds if random mode (note: may not align perfectly with scroll cycle)
-        if (random_mode && fmodf(time_s, 10.0f) < 0.016f) {
-            FILE *fp = popen("curl -s http://api.quotable.io/random | sed 's/.*\"content\":\"//' | sed 's/\",\"author.*//'", "r");
-            if (fp) {
-                if (fgets(message_text, sizeof(message_text), fp)) {
-                    char *newline = strchr(message_text, '\n');
-                    if (newline) *newline = '\0';
-                    if (strlen(message_text) > 0 && strcmp(message_text, "OUT TO LUNCH") != 0) {
-                        update_text_texture(message_text);
-                        // Update scroll parameters for new text length
-                        text_w = 0; // will be updated in update_text_texture
-                    }
-                }
-                pclose(fp);
-            }
-        }
-
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
         SDL_RenderClear(renderer);
 
@@ -214,6 +197,21 @@ int main(int argc, char *argv[]) {
         float cycle = fmodf(time_s, scroll_time);
         float progress = cycle / scroll_time; // 0 to 1
         int dst_x = (int)(W - (W + text_w) * progress); // Constant speed, complete off-screen exit
+
+        // Update quote after each complete cycle if random mode
+        if (random_mode && fmodf(time_s, scroll_time) < 0.016f) {
+            FILE *fp = popen("curl -s http://api.quotable.io/random | sed 's/.*\"content\":\"//' | sed 's/\",\"author.*//'", "r");
+            if (fp) {
+                if (fgets(message_text, sizeof(message_text), fp)) {
+                    char *newline = strchr(message_text, '\n');
+                    if (newline) *newline = '\0';
+                    if (strlen(message_text) > 0 && strcmp(message_text, "OUT TO LUNCH") != 0) {
+                        update_text_texture(message_text);
+                    }
+                }
+                pclose(fp);
+            }
+        }
 
         // Animate vertical steps
         float step_cycle = fmodf(time_s, 30.0f);
