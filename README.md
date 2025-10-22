@@ -2,7 +2,7 @@
 
 ![BeforeLight Logo](https://via.placeholder.com/800x200?text=BeforeLight+-%20After+Dark+Revival)
 
-> **Nostalgic Computing Classic**: Fully authentic reproductions of After Dark's legendary screensavers, rewritten from CSS/HTML to high-performance C + SDL2
+> **Nostalgic Computing Classic**: **16 fully authentic reproductions** of After Dark's legendary screensavers, rewritten from CSS/HTML to high-performance C + SDL2
 
 ## 🎮 Available Screensavers
 
@@ -13,7 +13,7 @@
 - **Dynamic bubbles** rising from the seafloor
 - **Multi-directional movement** (left/right with flip animations)
 - **Oceanic seabed** background tiling
-- **Runtime Controls**: `--t` (fish count), `--f` (fullscreen toggle)
+- **Runtime Controls**: `-t` (fish count), `-f` (fullscreen toggle)
 
 ### 🌧️ Hard Rain
 *Mesmerizing droplet cascade with physics*
@@ -22,32 +22,124 @@
 - **Staggered animations** for realistic wave patterns
 - **Dynamic RGB coloring** with smooth color transitions
 - **Pixel-perfect circular rendering**
-- **Runtime Controls**: Speed multiplier (`--s`)
+- **Runtime Controls**: `-s` speed multiplier, `-f` fullscreen toggle
 
-### � Globe
+### 🌍 Earth Globe
 *Bouncing spinning planet Earth*
 
 - **240px animated globe** bouncing across screen edges
 - **Spinning world map** with 21-frame rotation animation
 - **Bounces in all directions** (right-left, bottom-top)
 - **Sprite-sheet rendering** for smooth planetary rotation
-- **Runtime Controls**: Speed multiplier (`--s`)
+- **Runtime Controls**: `-s` speed multiplier, `-f` fullscreen toggle
 
-### �🏀 Bouncing Balls
+### 🏀 Bouncing Balls
 *Full physics particle simulation*
 
 - **10 colorful balls** with elastic collisions
 - **Realistic momentum conservation** and kinetic energy preservation
 - **Random initial velocities and positions**
 - **Wall bounce mechanics** with energy dampening
-- **Runtime Controls**: Speed scaling (`--s`)
+- **Runtime Controls**: `-s` speed scaling, `-f` fullscreen toggle
+
+### ✨ Stardust Warp
+*Cosmic tunnel starfield effect*
+
+- **Multi-layered star fields** with different speeds
+- **Depth of field simulation** through opacity changes
+- **Smooth scaling transitions** for 3D tunnel effect
+- **17 layered star field** animations with timed delays
+- **Runtime Controls**: `-s` speed multiplier, `-f` fullscreen toggle
+
+### 📝 Scrolling Messages
+*Animated marquee text display*
+
+- **Typewriter-text scrolling** across screen with physics
+- **Random inspirational quotes** from online API
+- **Alternating vertical positioning** for varied movement
+- **TTF font rendering** with fallbacks for maximum compatibility
+- **Runtime Controls**: `-s` speed, `-f` fullscreen, `-t` custom text, `-r` random quotes
+
+### 🔄 Messages 2
+*Bouncing marquee text with physics*
+
+- **Horizontal scrolling text** combined with vertical bouncing
+- **Realistic physics** for text panel movement and collision
+- **Identical message options** as Messages but with added vertical motion
+- **Wall bouncing mechanics** with elastic properties
+- **Runtime Controls**: `-s` speed, `-f` fullscreen, `-t` custom text, `-r` random quotes
 
 ### 🍞 Flying Toasters
 *Classic 90s toast rebellion*
 
 - **Original After Dark toasters** with authentic mechanics
-- **Flying animations** and particle effects
+- **Flying animations** and particle effects**
 - **Iconic before-dark rust aesthetic**
+- **Multi-toaster orchestration** with toast pieces
+- **Runtime Controls**: `-s` speed, `-f` fullscreen, `-t` toaster count, `-m` toast count
+
+### 🎨 Logo Morph
+*Transforming logo animation*
+
+- **Scaling and rotation** morphing effects over time
+- **Elastic physics** for bouncing logo movement
+- **50-second animation cycles** with smooth keyframes
+- **Transform mixing** (scale, rotate, translate simultaneously)
+- **Runtime Controls**: `-s` speed multiplier, `-f` fullscreen toggle
+
+### ⛈️ Rainstorm
+*Weather simulation with lightning*
+
+- **Angled rain physics** with 15-degree slant simulation
+- **Variable rain length** and dynamic speed changes
+- **Lightning flash effects** with black screen intermissions
+- **150 raindrop particles** for density depth
+- **Runtime Controls**: `-s` speed multiplier, `-f` fullscreen toggle
+
+### 🔦 Maglite Spotlight
+*Moving spotlight on desktop capture*
+
+- **Real screen capture** using X11 integration
+- **Smooth spotlight movement** with edge boundary constraints
+- **Radial gradient beam** with adjustable radius and brightness
+- **Dynamic velocity changes** for realistic spotlight mechanics
+- **Runtime Controls**: `-s` speed, `-f` fullscreen
+
+### 🌟 Life Forms
+*Star constellation creature formation*
+
+- **4 distinct life forms** (bear, fish, bird, human) using star patterns
+- **Multi-phase animation** (scatter → connect → hold → dissolve)
+- **Constellation creation** through 35+ vertex coordinate systems
+- **Smooth star interpolation** for realistic formation timelines
+- **Runtime Controls**: `-s` animation speed, `-f` display mode
+
+### 🌑 Fade Out
+*Expanding black hole screen absorption*
+
+- **Screen capture integration** with desktop content absorption
+- **Radial expansion** starting from screen center point
+- **Dual fading mechanism** (circular wipe + opacity reduction)
+- **Dynamic tendrils** adding visual complexity to absorption
+- **Runtime Controls**: `-s` expansion velocity, `-f` display preferences
+
+### 💊 The Matrix
+*Iconic digital rain character streams*
+
+- **190+ simultaneous streams** of cascading character columns
+- **Mixed character sets** (Japanese katakana, symbols, alphanumeric)
+- **Individual stream physics** with variable speed and positioning
+- **Brightness fade effects** for authentic falling text appearance
+- **Runtime Controls**: `-s` precipitation density, `-f` screen coverage mode
+
+### 🎲 Randomizer
+*Automated screensaver cycling system*
+
+- **Automatic sequencing** through complete BeforeLight ecosystem
+- **Subprocess orchestration** using fork/exec process management
+- **Transition identification** displays current active screensaver
+- **Dynamic cycle periods** ranging from 10 to 45 second intervals
+- **Runtime Controls**: `-s` transition duration, `-d` screen time allocation, `-f` display styling, `-r` name visibility
 
 ## 🚀 Quick Start
 
@@ -63,46 +155,61 @@ sudo apt-get install libsdl2-dev libsdl2-image-dev libsdl2-gfx-dev
 
 ### Build All
 ```bash
-make all  # Builds fishsaver, hardrain, bouncingball, toastersaver
+make all  # Builds all 16 screensavers to build/ directory
 ```
 
-### Quick Build
+### Individual Build Examples
 ```bash
-make all  # Build all screensavers to build/ directory
+# Core Classics
+make fishsaver      # Aquarium with swimming fish
+make hardrain       # Rainfall physics simulation
+make bouncingball   # Newtonian physics balls
+make globe          # Spinning bouncing Earth
+make warp           # Starfield tunnel effect
+
+# Enhanced Features
+make messages       # Scrolling text marquee
+make toastersaver   # Classic flying toasters
+make logo           # Morphing logo animation
+make rainstorm      # Weather with lightning
+make spotlight      # Desktop screen capture
+
+# Special Effects
+make lifeforms      # Star constellation formation
+make fadeout        # Expanding black hole
+make matrix         # Iconic digital rain
+make randomizer     # Cycles through all savers
 ```
 
-### Individual Builds
-```bash
-# Fish Aquarium
-gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/fishsaver main_fish.c
-
-# Hard Rain
-gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/hardrain main_hard_rain.c
-
-# Bouncing Balls
-gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/bouncingball main_bouncing_ball.c
-
-# Globe
-gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/globe main_globe.c
-
-# Warp
-gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/warp main_warp.c
-
-# Flying Toasters
-gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/toastersaver main_toaster.c
-```
-
-### Run
+### Run Examples
 
 ```bash
-# Start your favorite screensaver
-./build/fishsaver -f 1    # Fullscreen aquarium
-./build/hardrain -s 2     # Fast rain
-./build/bouncingball      # Windowed physics balls
-./build/globe -f 1        # Bouncing planet
-./build/warp -f 1         # Cosmic tunnel
+# Classic After Dark Reproductions
+./build/fishsaver -f 1    # Fullscreen underwater aquarium
+./build/hardrain -s 2     # Fast animated rainfall
+./build/bouncingball      # Windowed Newtonian physics
+./build/globe -f 1        # Bouncing spinning Earth
+./build/toastersaver -f 1 # Classic flying toasters
 
-# Exit: Press ESC, Q, or click inside window
+# Enhanced Text Effects
+./build/messages -r -f 1  # Random inspirational quotes
+./build/messages2 -t "Hello World" -f 1  # Bouncing custom text
+
+# Advanced Visual Effects
+./build/spotlight -f 1    # Spotlight on desktop capture
+./build/fadeout -s 1.5 -f 1  # Slow black hole expansion
+./build/matrix -f 1       # Digital character rain
+./build/lifeforms -f 1    # Constellation formations
+
+# Atmospheric Screensavers
+./build/warp -f 1         # Starfield tunnel effect
+./build/rainstorm -f 1    # Weather with lightning
+./build/logo -f 1         # Morphing logo animation
+
+# Meta Screensaver
+./build/randomizer -d 30 -f 1  # Cycles all screensavers every 30s
+
+# Exit: Press ESC, Q, or click inside any window
 ```
 
 ## 🎨 Technology & Implementation
@@ -110,8 +217,9 @@ gcc -Wall -Wextra `sdl2-config --cflags --libs` -lSDL2_image -lm -o build/toaste
 ### Core Technologies
 - **C99** - Optimized, low-level performance
 - **SDL2** - Cross-platform graphics, input, audio
-- **SDL2_Image** - PNG/GIF texture loading
+- **SDL2_Image & SDL2_ttf** - PNG/GIF texture loading, TrueType font rendering
 - **Mathematics** - Trigonometric animations, physics calculations
+- **X11 Integration** - Native Linux screen capture capabilities
 - **SDL_Renderer** - Hardware-accelerated graphics pipeline
 
 ### Code Architecture
