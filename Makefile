@@ -29,7 +29,10 @@ messages2: main_messages2.c
 logo: main_logo.c
 	$(CC) $(CFLAGS) -o build/logo main_logo.c $(LDFLAGS)
 
-all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo
+rainstorm: main_rainstorm.c
+	$(CC) $(CFLAGS) -o build/rainstorm main_rainstorm.c $(LDFLAGS)
+
+all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm
 
 clean:
 	rm -f build/*
