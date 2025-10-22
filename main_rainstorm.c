@@ -74,10 +74,10 @@ int main(int argc, char *argv[]) {
     };
     struct drop drops[MAX_DROPS];
 
-    // Initialize drops from top
+    // Initialize drops with extended horizontal coverage for angled rain
     for (int i = 0; i < MAX_DROPS; i++) {
-        drops[i].x = rand() % W;
-        drops[i].y = (float)(rand() % H);  // Start at random Y from top
+        drops[i].x = (rand() % (W + 100)) - 50; // Covers left margin for angled fallout
+        drops[i].y = (float)(rand() % H);  // Start at random Y for distribution
     }
 
     // Flash timing
@@ -118,9 +118,9 @@ int main(int argc, char *argv[]) {
             drops[i].y += varying_speed;  // Variable fall speed
             drops[i].x += (int)(varying_speed * 0.268f);  // tan(15°) ≈ 0.268 for slant proportional to speed
 
-            // Respawn at top when off bottom
+            // Respawn at top when off bottom with extended coverage
             if (drops[i].y > H + 20) {
-                drops[i].x = rand() % W;
+                drops[i].x = (rand() % (W + 100)) - 50; // Match initial coverage
                 drops[i].y = -10;
             }
         }
