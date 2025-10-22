@@ -188,14 +188,8 @@ int main(int argc, char *argv[]) {
         Uint32 current_time = SDL_GetTicks();
         float time_s = (current_time - start_time) / 1000.0f;
 
-        // Animate horizontal marquee with constant speed
-        float scroll_time = 10.0f;
-        float cycle = fmodf(time_s, scroll_time);
-        float progress = cycle / scroll_time; // 0 to 1
-        int dst_x = (int)(W - W * progress); // Constant speed W/10 pixels/second
-
-        // Update quote every 10 seconds if random mode
-        if (random_mode && fmodf(time_s, scroll_time) < 0.016f) {
+        // Update quote every 10 seconds (after each marquee cycle) if random mode
+        if (random_mode && fmodf(time_s, 10.0f) < 0.016f) {
             FILE *fp = popen("curl -s http://api.quotable.io/random | sed 's/.*\"content\":\"//' | sed 's/\",\"author.*//'", "r");
             if (fp) {
                 if (fgets(message_text, sizeof(message_text), fp)) {
@@ -208,6 +202,14 @@ int main(int argc, char *argv[]) {
                 pclose(fp);
             }
         }
+
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
+        SDL_RenderClear(renderer);
+
+        // Animate horizontal marquee (text scrolls completely off screen)
+        float cycle = fmodf(time_s, 10.0f);
+        float progress = cycle / 10.0f; // 0 to 1
+        int dst_x = (int)(W - (W + text_w) * progress); // Complete off-screen exit at progress=1
 
         // Animate vertical steps
         float step_cycle = fmodf(time_s, 30.0f);
