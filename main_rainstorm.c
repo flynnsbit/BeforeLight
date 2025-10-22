@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
     // Flash timing
     float next_flash_time = 4.0f + (rand() % 4); // 4-7 seconds
-    float flash_duration = 0.5f;
+    float flash_duration = 0.3f;
     float last_flash_time = -10.0f; // far past
     float current_flash_remaining = 0.0f;
 
@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Update drops - continuous fall with 15 deg slant and variable speed
-        float base_speed = 8.0f;
+        float base_speed = 16.0f;
         float max_speed = base_speed * 1.5f;
         float varying_speed = base_speed + (max_speed - base_speed) * 0.5f * (1 + sinf(time_s * 0.5f)); // Oscillate speed
         varying_speed *= speed_mult;
