@@ -33,9 +33,18 @@ rainstorm: main_rainstorm.c
 	$(CC) $(CFLAGS) -o build/rainstorm main_rainstorm.c $(LDFLAGS)
 
 spotlight: main_spotlight.c
-	$(CC) $(CFLAGS) -o build/spotlight main_spotlight.c $(LDFLAGS)
+	$(CC) $(CFLAGS) -o build/spotlight main_spotlight.c $(LDFLAGS) -lX11
 
-all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight
+lifeforms: main_lifeforms.c
+	$(CC) $(CFLAGS) -o build/lifeforms main_lifeforms.c $(LDFLAGS)
+
+fadeout: main_fadeout.c
+	$(CC) $(CFLAGS) -o build/fadeout main_fadeout.c $(LDFLAGS) -lX11
+
+matrix: main_matrix.c
+	$(CC) $(CFLAGS) -o build/matrix main_matrix.c $(LDFLAGS) -lSDL2_ttf
+
+all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix
 
 clean:
 	rm -f build/*
