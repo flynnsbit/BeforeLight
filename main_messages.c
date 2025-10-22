@@ -206,10 +206,10 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
         SDL_RenderClear(renderer);
 
-        // Animate horizontal marquee
+        // Animate horizontal marquee (constant speed regardless of text length)
         float cycle = fmodf(time_s, 10.0f);
         float progress = cycle / 10.0f; // 0 to 1
-        int dst_x = (int)(W - (W + text_w) * progress); // From W (left edge at right screen) to -text_w (completely off-screen left)
+        int dst_x = (int)(W - W * progress); // Constant speed W/10 pixels/s for scroll motion
 
         // Animate vertical steps
         float step_cycle = fmodf(time_s, 30.0f);
