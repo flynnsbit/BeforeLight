@@ -52,6 +52,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Change to project root directory for consistent relative path resolution
+    chdir("..");
     chdir("img");
 
     SDL_Window *window = SDL_CreateWindow("Logo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
