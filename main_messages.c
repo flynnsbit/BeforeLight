@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
         Uint32 current_time = SDL_GetTicks();
         float time_s = (current_time - start_time) / 1000.0f;
 
-        // Update quote every 10 seconds (after each marquee cycle) if random mode
+        // Update quote every 10 seconds if random mode (note: may not align perfectly with scroll cycle)
         if (random_mode && fmodf(time_s, 10.0f) < 0.016f) {
             FILE *fp = popen("curl -s http://api.quotable.io/random | sed 's/.*\"content\":\"//' | sed 's/\",\"author.*//'", "r");
             if (fp) {
@@ -197,6 +197,8 @@ int main(int argc, char *argv[]) {
                     if (newline) *newline = '\0';
                     if (strlen(message_text) > 0 && strcmp(message_text, "OUT TO LUNCH") != 0) {
                         update_text_texture(message_text);
+                        // Update scroll parameters for new text length
+                        text_w = 0; // will be updated in update_text_texture
                     }
                 }
                 pclose(fp);
@@ -206,10 +208,12 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
         SDL_RenderClear(renderer);
 
-        // Animate horizontal marquee (text scrolls completely off screen)
-        float cycle = fmodf(time_s, 10.0f);
-        float progress = cycle / 10.0f; // 0 to 1
-        int dst_x = (int)(W - (W + text_w) * progress); // Complete off-screen exit at progress=1
+        // Animate horizontal marquee with constant speed and complete off-screen exit
+        float text_ratio = text_w / (float)W;
+        float scroll_time = 10.0f * (1.0f + text_ratio); // Adjust time for complete scroll distance
+        float cycle = fmodf(time_s, scroll_time);
+        float progress = cycle / scroll_time; // 0 to 1
+        int dst_x = (int)(W - (W + text_w) * progress); // Constant speed, complete off-screen exit
 
         // Animate vertical steps
         float step_cycle = fmodf(time_s, 30.0f);
