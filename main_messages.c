@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
 
         // Animate horizontal marquee with constant speed and complete off-screen exit
         float text_ratio = text_w / (float)W;
-        float scroll_time = 10.0f * (1.0f + text_ratio); // Adjust time for complete scroll distance
+        float scroll_time = 12.0f * (1.0f + text_ratio); // Adjust time for complete scroll distance + brief pause
         float cycle = fmodf(time_s, scroll_time);
         float progress = cycle / scroll_time; // 0 to 1
         int dst_x = (int)(W - (W + text_w) * progress); // Constant speed, complete off-screen exit
