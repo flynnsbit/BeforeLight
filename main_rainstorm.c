@@ -80,9 +80,16 @@ int main(int argc, char *argv[]) {
         drops[i].y = (float)(rand() % H);  // Start at random Y from top
     }
 
+    // Flash timing
+    float next_flash_time = 4.0f + (rand() % 4); // 4-7 seconds
+    float flash_duration = 0.5f;
+    float last_flash_time = -10.0f; // far past
+    float current_flash_remaining = 0.0f;
+
     // Main loop
     SDL_Event e;
     int quit = 0;
+    Uint32 start_time = SDL_GetTicks();
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -91,10 +98,25 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Update drops - continuous fall with 15 deg slant
+        Uint32 current_time = SDL_GetTicks();
+        float time_s = (current_time - start_time) / 1000.0f;
+
+        // Check for flash trigger
+        if (current_flash_remaining <= 0.0f && time_s - last_flash_time >= next_flash_time) {
+            current_flash_remaining = flash_duration;
+            last_flash_time = time_s;
+            next_flash_time = 4.0f + (rand() % 5); // Next flash 4-8 seconds from now
+        }
+
+        // Update drops - continuous fall with 15 deg slant and variable speed
+        float base_speed = 8.0f;
+        float max_speed = base_speed * 1.5f;
+        float varying_speed = base_speed + (max_speed - base_speed) * 0.5f * (1 + sinf(time_s * 0.5f)); // Oscillate speed
+        varying_speed *= speed_mult;
+
         for (int i = 0; i < MAX_DROPS; i++) {
-            drops[i].y += 8.0f * speed_mult;  // Fall speed
-            drops[i].x += (int)(8.0f * speed_mult * 0.268f);  // tan(15°) ≈ 0.268 for slant
+            drops[i].y += varying_speed;  // Variable fall speed
+            drops[i].x += (int)(varying_speed * 0.268f);  // tan(15°) ≈ 0.268 for slant proportional to speed
 
             // Respawn at top when off bottom
             if (drops[i].y > H + 20) {
@@ -103,8 +125,17 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        // Update flash
+        if (current_flash_remaining > 0.0f) {
+            current_flash_remaining -= 0.016f; // Assuming 60fps
+        }
+
         // Render
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
+        if (current_flash_remaining > 0.0f) {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // White flash background
+        } else {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // black background
+        }
         SDL_RenderClear(renderer);
 
         // Draw angled rain drops (white lines from top to bottom)
