@@ -4,12 +4,11 @@
 #include <time.h>
 #include <stdlib.h>
 #include <unistd.h> // for getopt
+#include <stdbool.h>
 
 extern char *optarg;
 
 #define PI 3.14159f
-#define PAPER_WIDTH 600
-#define PAPER_HEIGHT 800
 #define FIRE_GRID_SIZE 80  // 80x80 fire grid
 #define MAX_PARTICLES 1000
 
@@ -108,8 +107,12 @@ int main(int argc, char *argv[]) {
     fire_sys.fire_intensity[FIRE_GRID_SIZE-5][FIRE_GRID_SIZE-5] = 0.8f;  // Bottom right
     fire_sys.fire_intensity[FIRE_GRID_SIZE/2][FIRE_GRID_SIZE-5] = 0.6f;  // Bottom center
 
-    // Create paper texture (creamy white paper)
-    SDL_Texture *paper_tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, PAPER_WIDTH, PAPER_HEIGHT);
+    // Scale paper to fill screen proportionally
+    int paper_width = W;
+    int paper_height = H;
+
+    // Create paper texture (creamy white paper) - full screen size
+    SDL_Texture *paper_tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, paper_width, paper_height);
     SDL_SetTextureBlendMode(paper_tex, SDL_BLENDMODE_BLEND);
 
     // Render paper background
@@ -118,8 +121,8 @@ int main(int argc, char *argv[]) {
     SDL_RenderClear(renderer);
 
     // Add some paper texture variation
-    for (int y = 0; y < PAPER_HEIGHT; y += 4) {
-        for (int x = 0; x < PAPER_WIDTH; x += 4) {
+    for (int y = 0; y < paper_height; y += 4) {
+        for (int x = 0; x < paper_width; x += 4) {
             int variation = (rand() % 20) - 10;  // -10 to +10
             int alpha = 255 + variation;
             if (alpha > 255) alpha = 255;
@@ -135,7 +138,6 @@ int main(int argc, char *argv[]) {
     // Animation phases and timing
     float animation_time = 0;
     const float paper_appear_time = 2.0f;     // Paper fades in
-    const float total_burn_time = 20.0f;      // Total burn duration
 
     // Main loop
     SDL_Event e;
@@ -189,9 +191,9 @@ int main(int argc, char *argv[]) {
                         int idx = fire_sys.particle_count++;
                         Particle *p = &fire_sys.particles[idx];
 
-                        // Position relative to paper
-                        float paper_x = (W - PAPER_WIDTH) / 2.0f + x * (PAPER_WIDTH / (float)FIRE_GRID_SIZE);
-                        float paper_y = H - PAPER_HEIGHT + y * (PAPER_HEIGHT / (float)FIRE_GRID_SIZE);
+                        // Position relative to paper (now fullscreen)
+                        float paper_x = x * (paper_width / (float)FIRE_GRID_SIZE);
+                        float paper_y = y * (paper_height / (float)FIRE_GRID_SIZE);
 
                         p->x = paper_x + (rand() % 10 - 5);
                         p->y = paper_y;
@@ -258,9 +260,7 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);  // Dark background
         SDL_RenderClear(renderer);
 
-        // Calculate paper position (centered, bottom-aligned)
-        int paper_x = (W - PAPER_WIDTH) / 2;
-        int paper_y = H - PAPER_HEIGHT;
+        // Paper now fills entire screen (no positioning needed)
 
         // Fade in paper
         float paper_alpha = 1.0f;
@@ -272,7 +272,7 @@ int main(int argc, char *argv[]) {
         SDL_SetTextureAlphaMod(paper_tex, (Uint8)(paper_alpha * 255));
 
         // Render burned areas as overlay
-        SDL_Texture *burn_tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, PAPER_WIDTH, PAPER_HEIGHT);
+        SDL_Texture *burn_tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, paper_width, paper_height);
         SDL_SetTextureBlendMode(burn_tex, SDL_BLENDMODE_BLEND);
         SDL_SetRenderTarget(renderer, burn_tex);
 
@@ -282,10 +282,10 @@ int main(int argc, char *argv[]) {
         // Draw burn layers
         for (int y = 0; y < FIRE_GRID_SIZE; y++) {
             for (int x = 0; x < FIRE_GRID_SIZE; x++) {
-                int px = x * (PAPER_WIDTH / FIRE_GRID_SIZE);
-                int py = y * (PAPER_HEIGHT / FIRE_GRID_SIZE);
-                int pw = (PAPER_WIDTH / FIRE_GRID_SIZE) + 1;
-                int ph = (PAPER_HEIGHT / FIRE_GRID_SIZE) + 1;
+                int px = x * (paper_width / FIRE_GRID_SIZE);
+                int py = y * (paper_height / FIRE_GRID_SIZE);
+                int pw = (paper_width / FIRE_GRID_SIZE) + 1;
+                int ph = (paper_height / FIRE_GRID_SIZE) + 1;
 
                 if (fire_sys.ash_level[x][y] > 0) {
                     // Ash - dark gray to black
@@ -311,8 +311,8 @@ int main(int argc, char *argv[]) {
 
         SDL_SetRenderTarget(renderer, NULL);  // Back to main renderer
 
-        // Render paper
-        SDL_Rect paper_rect = {paper_x, paper_y, PAPER_WIDTH, PAPER_HEIGHT};
+        // Render paper (fullscreen)
+        SDL_Rect paper_rect = {0, 0, paper_width, paper_height};
         SDL_RenderCopy(renderer, paper_tex, NULL, &paper_rect);
 
         // Render burn overlay
@@ -341,8 +341,17 @@ int main(int argc, char *argv[]) {
         SDL_RenderPresent(renderer);
         SDL_Delay(16); // ~60fps
 
-        // Reset animation when complete (paper burns and particles fade)
-        if (animation_time > total_burn_time + 10.0f && fire_sys.particle_count == 0) {
+        // Check if fire has reached the top of the screen - reset when top rows are burning
+        bool fire_at_top = false;
+        for (int x = 0; x < FIRE_GRID_SIZE; x++) {
+            if (fire_sys.fire_intensity[x][2] > 0.3f || fire_sys.fire_intensity[x][3] > 0.3f) {
+                fire_at_top = true;
+                break;
+            }
+        }
+
+        // Reset animation when fire reaches the top
+        if (fire_at_top && animation_time > 3.0f) {  // Allow some initial burn time
             animation_time = 0;
             // Reset fire system
             memset(&fire_sys, 0, sizeof(FireSystem));
