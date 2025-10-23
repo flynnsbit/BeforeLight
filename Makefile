@@ -47,7 +47,13 @@ matrix: main_matrix.c
 randomizer: main_randomizer.c
 	$(CC) $(CFLAGS) -o build/randomizer main_randomizer.c $(LDFLAGS) -lSDL2_ttf
 
-all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix randomizer
+paperfire: main_paperfire.c
+	$(CC) $(CFLAGS) -o build/paperfire main_paperfire.c $(LDFLAGS)
+
+cityscape: main_cityscape.c
+	$(CC) $(CFLAGS) -o build/cityscape main_cityscape.c $(LDFLAGS)
+
+all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix randomizer paperfire cityscape
 
 clean:
 	rm -f build/*
