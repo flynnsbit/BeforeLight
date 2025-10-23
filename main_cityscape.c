@@ -8,9 +8,9 @@ extern char *optarg;
 
 #define PI 3.14159f
 #define MAX_STARS 200
-#define MAX_BUILDING_PARTICLES 2000  // Particles that form buildings over time
+#define MAX_BUILDINGS 12  // Solid buildings with clear silhouettes
 #define MAX_METEORS 5
-#define SKY_HEIGHT_PERCENT 0.75f
+#define SKY_HEIGHT_PERCENT 0.8f
 
 typedef struct {
     float x, y;
@@ -20,11 +20,9 @@ typedef struct {
 } Star;
 
 typedef struct {
-    float x, y;
-    float vx, vy;
-    int active;  // Whether this particle is still falling or has settled
-    SDL_Color color;
-} BuildingParticle;
+    float x, height, width;
+    int num_windows;
+} Building;
 
 typedef struct {
     float x, y;
@@ -132,11 +130,14 @@ int main(int argc, char *argv[]) {
     Star stars[MAX_STARS];
     generate_stars(stars, MAX_STARS, W, sky_height);
 
-    // Initialize city-building particles
-    BuildingParticle building_particles[MAX_BUILDING_PARTICLES];
-    int building_particle_count = 0;
-    for (int i = 0; i < MAX_BUILDING_PARTICLES; i++) {
-        building_particles[i].active = 0;
+    // Initialize buildings
+    Building buildings[MAX_BUILDINGS];
+    int building_width = W / MAX_BUILDINGS * 0.8f;
+    for (int i = 0; i < MAX_BUILDINGS; i++) {
+        buildings[i].x = i * (W / MAX_BUILDINGS) + (rand() % (W / MAX_BUILDINGS / 4));
+        buildings[i].width = building_width + (rand() % building_width / 2); // Variable width
+        buildings[i].height = H * 0.4f + (rand() % (int)(H * 0.3f)); // Random height
+        buildings[i].num_windows = 3 + rand() % 4; // 3-6 windows
     }
 
     // Initialize meteors
@@ -235,41 +236,54 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Spawn and update building particles (star-like dots that fall and form city)
-        if (rand() % 30 < 3 && building_particle_count < MAX_BUILDING_PARTICLES) {  // Occasional spawning
-            BuildingParticle *p = &building_particles[building_particle_count++];
-            p->active = 1;
-            p->x = rand() % W;
-            p->y = sky_height * 0.2f;  // Start somewhat above ground
-            p->vx = (rand() % 40 - 20) / 50.0f;  // Slight drift
-            p->vy = 0.5f + (rand() % 50) / 100.0f;  // Slow fall
-            p->color = (SDL_Color){140 + rand() % 60, 140 + rand() % 60, 140 + rand() % 60, 255};  // Gray tones
-        }
+        // Render buildings (solid silhouettes with windows lit)
+        for (int i = 0; i < MAX_BUILDINGS; i++) {
+            Building *b = &buildings[i];
 
-        // Update building particles
-        int ground_level = H - 50;  // Where particles settle
-        for (int i = 0; i < building_particle_count; i++) {
-            BuildingParticle *p = &building_particles[i];
-            if (!p->active) continue;
+            // Building silhouette
+            SDL_SetRenderDrawColor(renderer, 35, 35, 40, 255);  // Dark building color
+            int building_x = (int)b->x;
+            int building_y = H - (int)b->height - 50;  // Ground level
+            int building_w = (int)b->width;
+            int building_h = (int)b->height;
 
-            p->x += p->vx * speed_mult;
-            p->y += p->vy * speed_mult;
+            SDL_Rect building_rect = {building_x, building_y, building_w, building_h};
+            SDL_RenderFillRect(renderer, &building_rect);
 
-            // If particle reaches ground or hits an existing settled particle, settle it
-            if (p->y >= ground_level) {
-                p->active = 0;  // Settled
-                p->y = ground_level + (rand() % 20 - 10);  // Slight variation
+            // Window lights
+            SDL_SetRenderDrawColor(renderer, 255, 255, 200, 255);  // Warm yellow windows
+
+            // Vertical windows stacked
+            int window_spacing = building_h / (b->num_windows + 1);
+            int window_width = building_w * 0.15f + rand() % building_w / 10;  // Variable window width
+            int window_margin = 8;
+
+            for (int w = 0; w < b->num_windows; w++) {
+                int window_y = building_y + window_spacing * (w + 1) - window_width/2;
+                int window_x = building_x + window_margin;
+
+                // Only render windows if they're within building bounds
+                if (window_x + window_width > building_x + building_w - window_margin) {
+                    window_width = building_x + building_w - window_x - window_margin;
+                }
+
+                if (window_x + window_width <= building_x + building_w &&
+                    window_y + window_width <= building_y + building_h) {
+
+                    SDL_Rect window_rect = {window_x, window_y, window_width, window_width};
+                    SDL_RenderFillRect(renderer, &window_rect);
+
+                    // Light rays extending upward from windows
+                    int ray_height = sky_height - window_y;
+                    if (ray_height > 0) {
+                        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
+                        SDL_SetRenderDrawColor(renderer, 255, 255, 200, 40);  // Subtle rays
+                        SDL_Rect light_ray = {window_x + window_width/2 - 10, window_y - ray_height, 20, ray_height};
+                        SDL_RenderFillRect(renderer, &light_ray);
+                        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+                    }
+                }
             }
-        }
-
-        // Render settled building particles (forming the city skyline)
-        SDL_SetRenderDrawColor(renderer, 80, 80, 90, 255);  // City particle color
-        for (int i = 0; i < building_particle_count; i++) {
-            BuildingParticle *p = &building_particles[i];
-            if (p->active) continue;  // Skip falling particles
-
-            SDL_Rect particle_rect = {(int)p->x, (int)p->y, 2, 2};
-            SDL_RenderFillRect(renderer, &particle_rect);
         }
 
         // Add subtle city glow near horizon
