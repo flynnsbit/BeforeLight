@@ -1,5 +1,4 @@
 #include <SDL.h>
-#include <SDL_image.h>
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
@@ -8,128 +7,83 @@
 extern char *optarg;
 
 #define PI 3.14159f
-#define MAX_BUILDINGS 50
-#define MAX_CARS 10
-#define MAX_FLOATING_OBJS 20
-#define MAX_PARTICLES 500
-#define BUILDING_TYPES 5
-
-typedef struct {
-    int x, y;
-    int width, height;
-    int type;  // 0-4 for different building styles
-    int window_rows, window_cols;
-    int lights[32][16];  // Window light states (1=lit, 0=dark)
-} Building;
+#define MAX_STARS 200
+#define MAX_BUILDINGS 30
+#define MAX_LIGHT_RAYS 50
+#define MAX_METEORS 5
+#define SKY_HEIGHT_PERCENT 0.75f
 
 typedef struct {
     float x, y;
-    float vx;
-    int type;  // 0=car, 1=vehicle
-    SDL_Color color;
-} Car;
+    float brightness;
+    float twinkle_speed;
+    float base_brightness;
+} Star;
+
+typedef struct {
+    float x, height;
+    int window_pattern;  // Bit pattern for window lights (16 windows)
+} Building;
 
 typedef struct {
     float x, y;
     float vx, vy;
     float life;
-    int type;  // 0=rain, 1=snow, 2=smoke
-    SDL_Color color;
-} Particle;
-
-typedef struct {
-    float x, y;
-    float vx, vy;
-    int type;  // 0=balloon, 1=bird, 2=helicopter
-    SDL_Color color;
-} FloatingObject;
+} Meteor;
 
 static void usage(const char *prog) {
     fprintf(stderr, "Usage: %s [options]\n", prog);
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -s F    Speed multiplier (default: 1.0)\n");
     fprintf(stderr, "  -f 0|1  Fullscreen (1=yes, 0=windowed) (default: 1)\n");
-    fprintf(stderr, "  -w 0|1  Enable weather effects (default: 1)\n");
     fprintf(stderr, "  -h      Show this help\n");
 }
 
-// Generate procedural building
-void generate_building(Building *b, int screen_height, int x_pos, int layer) {
-    b->x = x_pos;
-    b->type = rand() % BUILDING_TYPES;
-    b->width = 40 + rand() % 60;  // Building width 40-100px
+// Generate night sky color gradient
+SDL_Color get_sky_color(int y, int total_height) {
+    float normalized_y = (float)y / total_height;
+    SDL_Color color;
 
-    // Height based on layer (background smaller, foreground larger)
-    float height_scale = 0.3f + (layer * 0.3f);  // 0.3, 0.6, 0.9
-    b->height = (int)(screen_height * height_scale * (0.4f + (rand() % 60) / 100.0f));
+    // Deep night sky gradient from horizon to zenith
+    if (normalized_y < 0.3f) {
+        // Horizon area - slightly lighter blue
+        color.r = (Uint8)(30 + normalized_y * 50);
+        color.g = (Uint8)(50 + normalized_y * 70);
+        color.b = (Uint8)(80 + normalized_y * 100);
+    } else {
+        // Upper sky - deep navy to black
+        float upper_factor = (normalized_y - 0.3f) / 0.7f;
+        color.r = (Uint8)(15 * (1.0f - upper_factor));
+        color.g = (Uint8)(30 * (1.0f - upper_factor));
+        color.b = (Uint8)(80 * (1.0f - upper_factor));
+    }
 
-    // Position Y so buildings sit on ground (adjusted for layer)
-    float ground_y = screen_height * 0.8f;  // Ground level at 80% screen height
-    b->y = (int)(ground_y - b->height);
+    return color;
+}
 
-    // Window pattern
-    b->window_rows = b->height / 25;  // Window height ~25px
-    b->window_cols = b->width / 15;   // Window width ~15px
-
-    // Initialize lights randomly
-    for (int r = 0; r < b->window_rows && r < 32; r++) {
-        for (int c = 0; c < b->window_cols && c < 16; c++) {
-            b->lights[r][c] = (rand() % 100 < 65) ? 1 : 0;  // 65% chance of being lit
-        }
+void generate_stars(Star stars[], int count, int screen_width, int sky_height) {
+    for (int i = 0; i < count; i++) {
+        stars[i].x = rand() % screen_width;
+        stars[i].y = rand() % sky_height;
+        stars[i].base_brightness = 150 + rand() % 105;  // 150-255
+        stars[i].brightness = stars[i].base_brightness;
+        stars[i].twinkle_speed = 0.01f + (rand() % 100) / 1000.0f;  // Slow twinkle
     }
 }
 
-void init_cars(Car cars[], int count, int screen_width, int screen_height) {
+void generate_buildings(Building buildings[], int count, int screen_width) {
+    int spacing = screen_width / count;
+
     for (int i = 0; i < count; i++) {
-        cars[i].y = screen_height * 0.82f + (rand() % 30 - 15);  // Street level
-        cars[i].vx = 1.0f + (rand() % 20) / 10.0f;  // Speed 1.0-3.0
-        cars[i].type = rand() % 2;  // Car or truck
+        buildings[i].x = i * spacing + (rand() % spacing / 2);  // Some variation
+        buildings[i].height = 50 + rand() % 150;  // Building heights
 
-        // Start some cars from left, some from right
-        if (rand() % 2) {
-            cars[i].x = -50 - (rand() % 200);  // Coming from left
-        } else {
-            cars[i].x = screen_width + 50 + (rand() % 200);
-            cars[i].vx = -cars[i].vx;  // Going left
-        }
-
-        // Random colors
-        SDL_Color colors[] = {
-            {255, 0, 0, 255},    // Red
-            {0, 0, 255, 255},    // Blue
-            {255, 255, 0, 255},  // Yellow
-            {255, 255, 255, 255}, // White
-            {200, 200, 200, 255}, // Silver
-            {100, 100, 100, 255}  // Dark
-        };
-        cars[i].color = colors[rand() % 6];
-    }
-}
-
-void init_floating_objects(FloatingObject objs[], int count, int screen_width, int screen_height) {
-    for (int i = 0; i < count; i++) {
-        objs[i].type = rand() % 3;
-
-        if (objs[i].type == 0) {  // Balloon
-            objs[i].x = rand() % screen_width;
-            objs[i].y = screen_height * 0.9f;  // Start near bottom
-            objs[i].vx = (rand() % 20 - 10) / 10.0f;  // Drift slowly
-            objs[i].vy = -0.5f - (rand() % 10) / 10.0f;  // Rise slowly
-            objs[i].color = (SDL_Color){rand() % 255, rand() % 255, rand() % 255, 255};
-        } else if (objs[i].type == 1) {  // Bird
-            objs[i].x = rand() % screen_width;
-            objs[i].y = screen_height * 0.4f + (rand() % 100);  // Mid-height
-            objs[i].vx = 2.0f + (rand() % 40) / 10.0f;  // Faster
-            objs[i].vy = (rand() % 20 - 10) / 10.0f;  // Gentle up/down
-            if (rand() % 2) objs[i].vx = -objs[i].vx;  // Some go left
-            objs[i].color = (SDL_Color){100, 100, 100, 255};  // Gray
-        } else {  // Helicopter
-            objs[i].x = rand() % screen_width;
-            objs[i].y = screen_height * 0.3f + (rand() % 80);
-            objs[i].vx = 1.5f + (rand() % 20) / 10.0f;
-            objs[i].vy = 0;  // Fly straight
-            if (rand() % 2) objs[i].vx = -objs[i].vx;
-            objs[i].color = (SDL_Color){50, 50, 50, 255};  // Dark
+        // Generate window light pattern (bit pattern for 16 windows)
+        buildings[i].window_pattern = 0;
+        for (int w = 0; w < 16; w++) {
+            if (rand() % 100 < 40) {  // 40% chance window is lit
+                buildings[i].window_pattern |= (1 << w);
+            }
         }
     }
 }
@@ -138,20 +92,16 @@ int main(int argc, char *argv[]) {
     int opt;
     float speed_mult = 1.0f;
     int do_fullscreen = 1;
-    int weather_enabled = 1;
 
-    while ((opt = getopt(argc, argv, "s:f:w:h")) != -1) {
+    while ((opt = getopt(argc, argv, "s:f:h")) != -1) {
         switch (opt) {
             case 's':
                 speed_mult = atof(optarg);
                 if (speed_mult <= 0.1f) speed_mult = 0.1f;
-                if (speed_mult > 5.0f) speed_mult = 5.0f;
+                if (speed_mult > 3.0f) speed_mult = 3.0f;
                 break;
             case 'f':
                 do_fullscreen = atoi(optarg);
-                break;
-            case 'w':
-                weather_enabled = atoi(optarg);
                 break;
             case 'h':
             default:
@@ -167,13 +117,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (!(IMG_Init(IMG_INIT_PNG))) {
-        SDL_Log("IMG_Init Error: %s", IMG_GetError());
-        SDL_Quit();
-        return 1;
-    }
-
-    SDL_Window *window = SDL_CreateWindow("Cityscape", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
+    SDL_Window *window = SDL_CreateWindow("Starry Night Cityscape", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
     if (window == NULL) {
         SDL_Log("SDL_CreateWindow Error: %s", SDL_GetError());
         SDL_Quit();
@@ -196,36 +140,26 @@ int main(int argc, char *argv[]) {
 
     int W, H;
     SDL_GetRendererOutputSize(renderer, &W, &H);
+    int sky_height = (int)(H * SKY_HEIGHT_PERCENT);
 
-    // Initialize buildings for 3 layers
-    Building buildings[3][MAX_BUILDINGS];
-    int building_counts[3] = {15, 12, 8};  // Background, midground, foreground
+    // Initialize stars
+    Star stars[MAX_STARS];
+    generate_stars(stars, MAX_STARS, W, sky_height);
 
-    for (int layer = 0; layer < 3; layer++) {
-        int building_spacing = (W + 200) / building_counts[layer];  // Spread across width
+    // Initialize buildings
+    Building buildings[MAX_BUILDINGS];
+    generate_buildings(buildings, MAX_BUILDINGS, W);
 
-        for (int i = 0; i < building_counts[layer]; i++) {
-            int x_pos = (i * building_spacing) - 100 + (rand() % (building_spacing / 2));  // Some variation
-            generate_building(&buildings[layer][i], H, x_pos, layer);
-        }
+    // Initialize meteors
+    Meteor meteors[MAX_METEORS];
+    for (int i = 0; i < MAX_METEORS; i++) {
+        meteors[i].life = 0;  // Start inactive
     }
 
-    // Initialize cars and floating objects
-    Car cars[MAX_CARS];
-    FloatingObject floating_objs[MAX_FLOATING_OBJS];
-    Particle particles[MAX_PARTICLES];
-    int particle_count = 0;
-
-    init_cars(cars, MAX_CARS, W, H);
-    init_floating_objects(floating_objs, MAX_FLOATING_OBJS, W, H);
-
-    // Main loop
+    // Main animation loop
     SDL_Event e;
     int quit = 0;
     Uint32 last_time = SDL_GetTicks();
-
-    float scroll_offsets[3] = {0, 0, 0};  // Background, mid, foreground scroll
-    float base_scroll_speeds[3] = {0.2f, 0.5f, 1.0f};  // Different layer speeds
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -238,235 +172,143 @@ int main(int argc, char *argv[]) {
         float dt = (current_time - last_time) / 1000.0f;
         last_time = current_time;
 
-        // Update scrolling
-        for (int layer = 0; layer < 3; layer++) {
-            scroll_offsets[layer] -= base_scroll_speeds[layer] * speed_mult;
+        // Render background sky gradient (single scanlines for performance)
+        for (int y = 0; y < sky_height; y += 2) {  // Render every other line
+            SDL_Color sky_color = get_sky_color(y, H);
+            SDL_SetRenderDrawColor(renderer, sky_color.r, sky_color.g, sky_color.b, 255);
 
-            // Wrap scroll (reset when buildings are off screen)
-            if (scroll_offsets[layer] < -200) {
-                scroll_offsets[layer] = 0;
+            SDL_Rect scanline = {0, y, W, 2};
+            SDL_RenderFillRect(renderer, &scanline);
+        }
+
+        // Render stars with twinkling
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        for (int i = 0; i < MAX_STARS; i++) {
+            // Update twinkle
+            stars[i].brightness = stars[i].base_brightness +
+                                 sinf(current_time * 0.001f * stars[i].twinkle_speed) * 50;
+
+            if (stars[i].brightness > 255) stars[i].brightness = 255;
+            if (stars[i].brightness < 100) stars[i].brightness = 100;
+
+            int size = (stars[i].brightness > 200) ? 2 : 1;
+            int alpha = (int)stars[i].brightness;
+
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, alpha);
+            SDL_Rect star_rect = {(int)stars[i].x - size/2, (int)stars[i].y - size/2, size, size};
+            SDL_RenderFillRect(renderer, &star_rect);
+
+            // Brighter stars get a glow effect
+            if (stars[i].brightness > 220) {
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
+                SDL_SetRenderDrawColor(renderer, 255, 255, 200, alpha * 0.3f);
+                SDL_Rect glow_rect = {(int)stars[i].x - 3, (int)stars[i].y - 3, 6, 6};
+                SDL_RenderFillRect(renderer, &glow_rect);
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             }
         }
 
-        // Update cars
-        for (int i = 0; i < MAX_CARS; i++) {
-            cars[i].x += cars[i].vx * speed_mult;
-            if (cars[i].x > W + 100) cars[i].x = -100 - (rand() % 100);
-            if (cars[i].x < -100) cars[i].x = W + 100 + (rand() % 100);
-        }
-
-        // Update floating objects
-        for (int i = 0; i < MAX_FLOATING_OBJS; i++) {
-            floating_objs[i].x += floating_objs[i].vx * speed_mult;
-            floating_objs[i].y += floating_objs[i].vy * speed_mult;
-
-            // Wrap around screen edges
-            if (floating_objs[i].x > W + 50) floating_objs[i].x = -50;
-            if (floating_objs[i].x < -50) floating_objs[i].x = W + 50;
-            if (floating_objs[i].y < -50) {
-                // Reset object to bottom
-                floating_objs[i].y = H + 50;
-                floating_objs[i].x = rand() % W;
-                floating_objs[i].vx = (rand() % 20 - 10) / 10.0f;
-            }
-        }
-
-        // Update building lights randomly
-        if (rand() % 200 < 2) {  // Occasionally toggle lights
-            for (int layer = 0; layer < 3; layer++) {
-                for (int i = 0; i < building_counts[layer]; i++) {
-                    Building *b = &buildings[layer][i];
-                    int r = rand() % b->window_rows;
-                    int c = rand() % b->window_cols;
-                    b->lights[r][c] = 1 - b->lights[r][c];  // Toggle
+        // Occasionally spawn a meteor
+        if (rand() % 800 < 2) {  // Low probability
+            for (int i = 0; i < MAX_METEORS; i++) {
+                if (meteors[i].life <= 0) {
+                    meteors[i].x = rand() % W;
+                    meteors[i].y = -10;
+                    meteors[i].vx = -(3.0f + rand() % 10) * speed_mult;
+                    meteors[i].vy = (1.0f + rand() % 5) * speed_mult;
+                    meteors[i].life = 1.0f;
+                    break;
                 }
             }
         }
 
-        // Add weather particles if enabled
-        if (weather_enabled && particle_count < MAX_PARTICLES - 50) {
-            for (int i = 0; i < 3; i++) {  // Add a few particles each frame
-                if (particle_count >= MAX_PARTICLES) break;
+        // Update and render meteors
+        for (int i = 0; i < MAX_METEORS; i++) {
+            if (meteors[i].life > 0) {
+                meteors[i].x += meteors[i].vx;
+                meteors[i].y += meteors[i].vy;
+                meteors[i].life -= dt * 1.5f;
 
-                int type = rand() % 2;  // Rain or snow
-                particles[particle_count].x = rand() % W;
-                particles[particle_count].y = -10;
-                particles[particle_count].vx = type ? 0 : 0.1f;  // Snow drifts, rain falls straight
-                particles[particle_count].vy = 2.0f + (rand() % 20) / 10.0f;
-                particles[particle_count].life = 1.0f;
-                particles[particle_count].type = type;
+                if (meteors[i].life > 0 && meteors[i].y < sky_height) {
+                    // Draw meteor trail
+                    int trail_length = 20;
+                    for (int t = 0; t < trail_length; t++) {
+                        int trail_x = (int)(meteors[i].x + meteors[i].vx * t * 0.5f);
+                        int trail_y = (int)(meteors[i].y + meteors[i].vy * t * 0.5f);
+                        float trail_alpha = meteors[i].life * (trail_length - t) / trail_length;
 
-                if (type == 0) {  // Rain
-                    particles[particle_count].color = (SDL_Color){100, 150, 255, 200};
-                } else {  // Snow
-                    particles[particle_count].color = (SDL_Color){255, 255, 255, 200};
-                    particles[particle_count].vy *= 0.5f;  // Slower falling
-                }
-
-                particle_count++;
-            }
-        }
-
-        // Update weather particles
-        for (int i = 0; i < particle_count; i++) {
-            if (particles[i].life <= 0) continue;
-
-            particles[i].x += particles[i].vx * speed_mult;
-            particles[i].y += particles[i].vy * speed_mult;
-
-            if (particles[i].y > H + 20) {
-                particles[i].life = 0;  // Off screen
-            }
-        }
-
-        // Remove dead particles
-        int write_idx = 0;
-        for (int read_idx = 0; read_idx < particle_count; read_idx++) {
-            if (particles[read_idx].life > 0) {
-                particles[write_idx++] = particles[read_idx];
-            }
-        }
-        particle_count = write_idx;
-
-        // Rendering
-
-        // Sky gradient (day to night transition)
-        float time = (SDL_GetTicks() / 10000.0f) * speed_mult;  // Slow cycle
-        float sky_r = 135 + 120 * sinf(time);
-        float sky_g = 206 + 50 * sinf(time + 2);
-        float sky_b = 235 + 20 * sinf(time + 4);
-
-        sky_r = fmaxf(0, fminf(255, sky_r));
-        sky_g = fmaxf(0, fminf(255, sky_g));
-        sky_b = fmaxf(0, fminf(255, sky_b));
-
-        SDL_SetRenderDrawColor(renderer, (Uint8)sky_r, (Uint8)sky_g, (Uint8)sky_b, 255);
-        SDL_RenderClear(renderer);
-
-        // Render layers from back to front
-        for (int layer = 0; layer < 3; layer++) {
-            float scroll_pos = scroll_offsets[layer];
-
-            for (int i = 0; i < building_counts[layer]; i++) {
-                Building *b = &buildings[layer][i];
-
-                // Building position with scroll and layer scaling
-                float scale = 0.3f + (layer * 0.3f);  // 0.3, 0.6, 0.9
-                int render_x = b->x + (int)scroll_pos;
-                int render_y = b->y;
-                int render_width = (int)(b->width * scale);
-                int render_height = (int)(b->height * scale);
-
-                // Wrap buildings around screen
-                while (render_x + render_width < 0) render_x += W + 200;
-                while (render_x > W) render_x -= W + 200;
-
-                // Skip if off screen
-                if (render_x + render_width < 0 || render_x > W) continue;
-
-                // Building color based on type
-                SDL_Color building_colors[BUILDING_TYPES] = {
-                    {80, 80, 90, 255},   // Dark gray
-                    {90, 85, 75, 255},   // Brown
-                    {70, 70, 85, 255},   // Blue-gray
-                    {85, 75, 70, 255},   // Tan
-                    {75, 85, 75, 255}    // Green-gray
-                };
-
-                SDL_SetRenderDrawColor(renderer, building_colors[b->type].r, building_colors[b->type].g, building_colors[b->type].b, 255);
-                SDL_Rect building_rect = {render_x, render_y, render_width, render_height};
-                SDL_RenderFillRect(renderer, &building_rect);
-
-                // Render windows if in foreground (better visibility)
-                if (layer == 2 && scale > 0.8f) {
-                    SDL_SetRenderDrawColor(renderer, 255, 255, 200, 255);  // Window light color
-
-                    int window_width = render_width / b->window_cols;
-                    int window_height = render_height / b->window_rows;
-                    int window_margin = 2;
-
-                    for (int r = 0; r < b->window_rows && r < 32; r++) {
-                        for (int c = 0; c < b->window_cols && c < 16; c++) {
-                            if (b->lights[r][c]) {
-                                SDL_Rect window_rect = {
-                                    render_x + (c * window_width) + window_margin,
-                                    render_y + (r * window_height) + window_margin,
-                                    window_width - 2*window_margin,
-                                    window_height - 2*window_margin
-                                };
-                                SDL_RenderFillRect(renderer, &window_rect);
-                            }
+                        if (trail_x >= 0 && trail_x < W && trail_y >= 0 && trail_y < sky_height) {
+                            SDL_SetRenderDrawColor(renderer, 255, 255, 150, (Uint8)(trail_alpha * 255));
+                            SDL_RenderDrawPoint(renderer, trail_x, trail_y);
                         }
                     }
                 }
             }
         }
 
-        // Render cars (on street level)
-        for (int i = 0; i < MAX_CARS; i++) {
-            int car_width = cars[i].type ? 25 : 20;  // Trucks larger
-            int car_height = cars[i].type ? 10 : 8;
+        // Render buildings (silhouette against city glow)
+        SDL_SetRenderDrawColor(renderer, 30, 30, 50, 255);  // Dark building silhouettes
+        for (int i = 0; i < MAX_BUILDINGS; i++) {
+            Building *b = &buildings[i];
+            int building_width = (W / MAX_BUILDINGS) * 0.8f;
+            int bottom_y = H - 20;  // Ground level
 
-            SDL_SetRenderDrawColor(renderer, cars[i].color.r, cars[i].color.g, cars[i].color.b, 255);
-            SDL_Rect car_rect = {(int)cars[i].x, (int)cars[i].y, car_width, car_height};
-            SDL_RenderFillRect(renderer, &car_rect);
+            // Draw building silhouette
+            SDL_Rect building_sil = {(int)b->x, bottom_y - b->height, building_width, b->height};
+            SDL_RenderFillRect(renderer, &building_sil);
 
-            // Headlights (small bright rectangles)
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            SDL_Rect headlight = {(int)cars[i].x + car_width - 3, (int)cars[i].y + 1, 2, car_height-2};
-            SDL_RenderFillRect(renderer, &headlight);
-        }
+            // Render window lights
+            SDL_SetRenderDrawColor(renderer, 255, 255, 200, 255);  // Warm window light
+            int window_rows = 4;
+            int window_cols = 4;
+            int window_width = building_width / window_cols;
+            int window_height = b->height / window_rows;
+            int window_margin = 2;
 
-        // Render floating objects
-        for (int i = 0; i < MAX_FLOATING_OBJS; i++) {
-            FloatingObject *obj = &floating_objs[i];
-            int size = (obj->type == 0) ? 8 : (obj->type == 1) ? 6 : 12;  // Balloon, bird, helicopter
+            for (int r = 0; r < window_rows; r++) {
+                for (int c = 0; c < window_cols; c++) {
+                    int window_bit = r * window_cols + c;
+                    if ((b->window_pattern & (1 << window_bit)) && b->height >= 40) {
+                        SDL_Rect window = {
+                            (int)b->x + c * window_width + window_margin,
+                            bottom_y - (r + 1) * window_height + window_margin,
+                            window_width - 2*window_margin,
+                            window_height - 2*window_margin
+                        };
+                        SDL_RenderFillRect(renderer, &window);
 
-            SDL_SetRenderDrawColor(renderer, obj->color.r, obj->color.g, obj->color.b, 255);
-            SDL_Rect obj_rect = {(int)obj->x - size/2, (int)obj->y - size/2, size, size};
-
-            if (obj->type == 0) {  // Balloon - circle
-                int radius = size / 2;
-                for (int y = -radius; y <= radius; y++) {
-                    for (int x = -radius; x <= radius; x++) {
-                        if (x*x + y*y <= radius*radius) {
-                            SDL_RenderDrawPoint(renderer, obj->x + x, obj->y + y);
-                        }
-                    }
-                }
-                // Balloon string
-                SDL_RenderDrawLine(renderer, obj->x, obj->y + radius, obj->x, obj->y + radius + 10);
-            } else if (obj->type == 1) {  // Bird - simple shape
-                SDL_RenderDrawLine(renderer, obj->x - size/2, obj->y, obj->x + size/2, obj->y);
-                SDL_RenderDrawLine(renderer, obj->x + size/2, obj->y, obj->x, obj->y - size/2);
-                SDL_RenderDrawLine(renderer, obj->x, obj->y - size/2, obj->x - size/2, obj->y);
-            } else {  // Helicopter - simple rectangle
-                SDL_RenderFillRect(renderer, &obj_rect);
-            }
-        }
-
-        // Render weather particles
-        if (weather_enabled) {
-            for (int i = 0; i < particle_count; i++) {
-                Particle *p = &particles[i];
-                int alpha = (int)(p->life * p->color.a);
-                SDL_SetRenderDrawColor(renderer, p->color.r, p->color.g, p->color.b, alpha);
-
-                int size = p->type ? 3 : 1;  // Snow larger than rain
-                if (p->type == 0) { // Rain - line
-                    SDL_RenderDrawLine(renderer, p->x, p->y, p->x + p->vx * 3, p->y + p->vy * 3);
-                } else { // Snow - circle
-                    int radius = size;
-                    for (int y = -radius; y <= radius; y++) {
-                        for (int x = -radius; x <= radius; x++) {
-                            if (x*x + y*y <= radius*radius) {
-                                SDL_RenderDrawPoint(renderer, p->x + x, p->y + y);
-                            }
+                        // Window glow effect (light ray upward)
+                        int ray_alpha = 30;
+                        int ray_height = sky_height - (bottom_y - r * window_height);
+                        if (ray_height > 0) {
+                            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
+                            SDL_SetRenderDrawColor(renderer, 255, 255, 200, ray_alpha);
+                            SDL_Rect light_ray = {
+                                window.x + window.w/2 - 15,
+                                window.y - ray_height,
+                                30,
+                                ray_height
+                            };
+                            SDL_RenderFillRect(renderer, &light_ray);
+                            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
                         }
                     }
                 }
             }
         }
+
+        // Add subtle city glow near horizon
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
+        for (int y = sky_height; y < H; y++) {
+            float glow_factor = 1.0f - ((float)y - sky_height) / (H - sky_height);
+            if (glow_factor > 0) {
+                Uint8 glow_alpha = (Uint8)(glow_factor * 80 * speed_mult);
+                SDL_SetRenderDrawColor(renderer, 100, 120, 180, glow_alpha);
+                SDL_Rect glow_line = {0, y, W, 1};
+                SDL_RenderFillRect(renderer, &glow_line);
+            }
+        }
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 
         SDL_RenderPresent(renderer);
         SDL_Delay(16); // ~60fps
@@ -475,7 +317,6 @@ int main(int argc, char *argv[]) {
     // Cleanup
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    IMG_Quit();
     SDL_Quit();
     return 0;
 }
