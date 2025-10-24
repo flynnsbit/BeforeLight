@@ -674,9 +674,7 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
         float window_height = floor_height * 0.5f; // Windows occupy 50% of floor height (smaller)
         float window_spacing_y = floor_height * 0.25f; // Vertical spacing between floors
 
-        // ILLUMINATED WINDOW RENDERING
-        glColor4f(0.95f, 0.9f, 0.6f, 0.9f); // Warm interior light (slightly yellow)
-
+        // ILLUMINATED WINDOW RENDERING WITH BASIC FRAMES (Phase 1 Enhancement)
         glBegin(GL_QUADS);
         for (int floor = 0; floor < floors; floor++) {
             for (int window_x = 0; window_x < windows_per_floor; window_x++) {
@@ -691,7 +689,16 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
                 float window_right = window_left + window_width * 0.8f; // 80% of allocated width
                 float window_top = window_bottom + window_height;
 
-                // RENDER ILLUMINATED WINDOW RECTANGLE
+                // RENDER DARK WINDOW BORDER FRAME FIRST
+                glColor4f(0.1f, 0.1f, 0.1f, 0.9f); // Dark gray frame
+                const float FRAME_WIDTH = 1.5f; // 1.5 pixel frame
+                glVertex2f(window_left - FRAME_WIDTH, window_bottom - FRAME_WIDTH);
+                glVertex2f(window_right + FRAME_WIDTH, window_bottom - FRAME_WIDTH);
+                glVertex2f(window_right + FRAME_WIDTH, window_top + FRAME_WIDTH);
+                glVertex2f(window_left - FRAME_WIDTH, window_top + FRAME_WIDTH);
+
+                // RENDER ILLUMINATED WINDOW INTERIOR
+                glColor4f(0.95f, 0.9f, 0.6f, 0.9f); // Warm interior light (slightly yellow)
                 glVertex2f(window_left, window_bottom);
                 glVertex2f(window_right, window_bottom);
                 glVertex2f(window_right, window_top);
@@ -1005,30 +1012,7 @@ int main(int argc, char *argv[]) {
         glStencilFunc(GL_EQUAL, 0, 0xFF);  // Only render where stencil is 0
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-        // RENDER THIN WHITE BUILDING OUTLINES - Subtle edge definition for all structures (aligned with windows)
-        glColor4f(1.0f, 1.0f, 1.0f, 0.8f); // White, semi-transparent for subtle definition
-        glLineWidth(1.0f); // Thinnest possible line
 
-        for (int build_idx = 0; build_idx < MAX_URBAN_BUILDINGS; build_idx++) {
-            UrbanBuilding *structure = &urban_complex[build_idx];
-            if (structure->floor_quantity <= 0) continue; // Skip uninitialized buildings
-
-            float x1 = structure->x;
-            float y1 = structure->y;
-            float x2 = structure->x + structure->width;
-            float y2 = structure->y + structure->height;
-
-            glBegin(GL_LINES);
-            // Top horizontal
-            glVertex2f(x1, y2); glVertex2f(x2, y2);
-            // Bottom horizontal
-            glVertex2f(x1, y1); glVertex2f(x2, y1);
-            // Left vertical
-            glVertex2f(x1, y1); glVertex2f(x1, y2);
-            // Right vertical
-            glVertex2f(x2, y1); glVertex2f(x2, y2);
-            glEnd();
-        }
 
         // Render sky stars (buildings static, stars work normally)
         render_stars(stars, actual_star_count, screen_width, screen_height);
