@@ -1163,10 +1163,8 @@ int main(int argc, char *argv[]) {
         }
 
         // RENDER GAP STARS BETWEEN BUILDINGS - Continuous density gradient (no stencil needed)
-        // NOTE: DISABLED in celestial sphere mode to isolate spinning issue
-        if (!celestial_sphere_mode) {
-            render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);
-        }
+        // NOTE: ENABLED for subtle slow rotation effect
+        render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);
 
         // No stencil operations needed for gap stars - they render in open spaces
 
@@ -1319,22 +1317,48 @@ void init_stars(Star *stars, int count, int screen_width, int screen_height) {
 
 void update_stars(Star *stars, int count, float dt, int screen_width, int screen_height) {
     static float time = 0;
+    static float global_star_rotation = 0.0f; // Global rotation angle for gap stars
     time += dt;
+
+    // Apply super slow rotation to gap stars (using special system detection)
+    // NOTE: Only applies slow rotation to gap stars via this function
+    global_star_rotation += dt * 0.001f; // VERY slow rotation (about 1 degree per second)
 
     for (int i = 0; i < count; i++) {
         Star *s = &stars[i];
 
-        // Update position with gentle drift (no settling behavior anymore)
-        s->x += s->vx * dt;
-        s->y += s->vy * dt;
+        // Gap stars get global super-slow rotation instead of individual drift
+        if (s->building_gap == -1) { // Gap stars use building_gap = -1
+            // Rotate around screen center for subtler effect
+            float center_x = screen_width / 2.0f;
+            float center_y = screen_height / 2.0f;
 
-        // Wrap horizontally only
-        if (s->x < 0) s->x = screen_width;
-        if (s->x > screen_width) s->x = 0;
+            // Calculate distance from center
+            float dx = s->x - center_x;
+            float dy = s->y - center_y;
 
-        // All stars stay within bounds vertically
-        if (s->y < 20) s->y = screen_height - 20; // Avoid bottom area for floating stars
-        if (s->y > screen_height - 20) s->y = 20;
+            // Apply slow rotation
+            float cos_rot = cosf(global_star_rotation);
+            float sin_rot = sinf(global_star_rotation);
+
+            float new_dx = dx * cos_rot - dy * sin_rot;
+            float new_dy = dx * sin_rot + dy * cos_rot;
+
+            s->x = center_x + new_dx;
+            s->y = center_y + new_dy;
+        } else {
+            // Legacy behavior for non-gap stars (drift + wraparound)
+            s->x += s->vx * dt;
+            s->y += s->vy * dt;
+
+            // Wrap horizontally only
+            if (s->x < 0) s->x = screen_width;
+            if (s->x > screen_width) s->x = 0;
+
+            // All stars stay within bounds vertically
+            if (s->y < 20) s->y = screen_height - 20;
+            if (s->y > screen_height - 20) s->y = 20;
+        }
 
         // Update twinkling brightness with sine wave
         float twinkle_offset = sinf(time * s->twinkle_speed + s->twinkle_phase) * 0.4f;
