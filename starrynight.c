@@ -1221,9 +1221,20 @@ void render_stars(Star *stars, int count, int screen_width __attribute__((unused
     glEnd();
 }
 
-void init_meteor(Meteor *meteor, int screen_width __attribute__((unused)), int screen_height) {
-    meteor->x = -50; // Start off-screen left
-    meteor->y = screen_height * 0.6f + (rand() % (screen_height / 3)); // Upper third
+void init_meteor(Meteor *meteor, int screen_width, int screen_height) {
+    // Random start position off-screen (left, right, or top) but above buildings
+    int start_side = rand() % 3; // 0=left, 1=right, 2=top
+
+    if (start_side == 0) { // Left edge
+        meteor->x = -50;
+        meteor->y = 60 + (rand() % (screen_height / 2)); // Upper 2/3 above buildings (minimum Y=60)
+    } else if (start_side == 1) { // Right edge
+        meteor->x = screen_width + 50;
+        meteor->y = 60 + (rand() % (screen_height / 2)); // Upper 2/3 above buildings (minimum Y=60)
+    } else { // Top edge
+        meteor->x = rand() % screen_width;
+        meteor->y = screen_height + 50;
+    }
 
     // Diagonal downward-right movement
     meteor->vx = 250 + rand() % 150; // 250-400 px/sec
