@@ -715,16 +715,15 @@ int main(int argc, char *argv[]) {
             case 's':
                 speed_mult = atof(optarg);
                 break;
-
-            case 2: // MEGATOWER CONSTRUCTION (40-80 Stories, Supertall Architectural Monument)
-                urban_structure->floor_quantity = 40 + (rand() % 41);
-                urban_structure->height = urban_structure->floor_quantity * 16.5f * 1.2f; // 20% height increase
-                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
-                urban_structure->width = 30.0f + (float)(rand() % 40); // Wider range: 30-70 pixels
-                urban_structure->illumination_percentage = 1.0f;
-                urban_structure->illumination_pattern_type = 2; // 24/7 operational criticality
-                urban_structure->aircraft_warning_beacon_present = 1; // Mandatory aviation safety
-                urban_structure->antenna_element_array = 1 + (rand() % 3); // Communication infrastructure
+            case 'd':
+                star_density = atof(optarg);
+                if (star_density < 0) star_density = 0;
+                if (star_density > 1) star_density = 1;
+                break;
+            case 'm':
+                meteor_freq = atof(optarg);
+                if (meteor_freq < 0) meteor_freq = 0;
+                if (meteor_freq > 5) meteor_freq = 5;
                 break;
             case 'h':
             default:
@@ -945,13 +944,13 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // WINDOW RANDOM ILLUMINATION UPDATE - Every 5 seconds toggle some windows randomly
+        // WINDOW RANDOM ILLUMINATION UPDATE - Every 0.75 seconds toggle some windows randomly for dynamic lighting effect
         window_update_timer += dt;
-        if (window_update_timer >= 5.0f) { // 5 second interval
+        if (window_update_timer >= 0.75f) { // 0.75 second interval - faster, more visible activity
             window_update_timer = 0.0f; // Reset timer
 
-            // Randomly select and toggle several windows across buildings
-            for (int toggle_count = 0; toggle_count < 15; toggle_count++) { // Toggle 15 windows each time
+            // Randomly select and toggle several windows across buildings (slightly more than before)
+            for (int toggle_count = 0; toggle_count < 25; toggle_count++) { // Toggle 25 windows each time
                 int random_building = rand() % MAX_URBAN_BUILDINGS;
                 UrbanBuilding* structure = &urban_complex[random_building];
 
@@ -1345,6 +1344,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             case 3: // HOSPITAL MEDICAL FACILITY (8-20 Stories, Emergency Illumination)
                 urban_structure->floor_quantity = 8 + (rand() % 13);
                 urban_structure->height = urban_structure->floor_quantity * 22.0f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 22.0f + (float)(rand() % 32); // Wider range: 22-54 pixels
                 urban_structure->illumination_percentage = 1.0f;
                 urban_structure->illumination_pattern_type = 3; // 24-hour medical operation
@@ -1354,6 +1354,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             case 4: // EDUCATIONAL ACADEMIC INSTITUTE (6-15 Stories, Classroom Configuration)
                 urban_structure->floor_quantity = 6 + (rand() % 10);
                 urban_structure->height = urban_structure->floor_quantity * 19.0f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 26.0f + (float)(rand() % 28); // Wider range: 26-54 pixels
                 urban_structure->illumination_percentage = 0.6f;
                 urban_structure->illumination_pattern_type = 4; // Academic scheduling cycle
@@ -1363,6 +1364,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             case 5: // COMMERCIAL BUSINESS DISTRICT (10-25 Stories, Neon Advertising)
                 urban_structure->floor_quantity = 10 + (rand() % 16);
                 urban_structure->height = urban_structure->floor_quantity * 17.5f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 25.0f + (float)(rand() % 31); // Wider range: 25-56 pixels
                 urban_structure->illumination_percentage = 0.85f;
                 urban_structure->illumination_pattern_type = 5; // Late-night commercial economy
@@ -1371,6 +1373,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             case 6: // INDUSTRIAL MANUFACTURING COMPLEX (3-8 Stories, Ventilation Systems)
                 urban_structure->floor_quantity = 3 + (rand() % 6);
                 urban_structure->height = urban_structure->floor_quantity * 25.0f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 18.0f + (float)(rand() % 28); // Wider range: 18-46 pixels
                 urban_structure->illumination_percentage = 0.8f;
                 urban_structure->illumination_pattern_type = 6; // First/third shift operational cycles
@@ -1380,6 +1383,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             case 7: // CULTURAL INSTITUTION VENUE (12-25 Stories, Performance Hall Architecture)
                 urban_structure->floor_quantity = 12 + (rand() % 14);
                 urban_structure->height = urban_structure->floor_quantity * 20.0f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 27.0f + (float)(rand() % 29); // Wider range: 27-56 pixels
                 urban_structure->illumination_percentage = 0.4f;
                 urban_structure->illumination_pattern_type = 7; // Event-based illumination patterns
@@ -1389,6 +1393,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             case 8: // RESEARCH LABORATORY COMPLEX (8-18 Stories, Specialized Ventilation)
                 urban_structure->floor_quantity = 8 + (rand() % 11);
                 urban_structure->height = urban_structure->floor_quantity * 21.0f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 24.0f + (float)(rand() % 30); // Wider range: 24-54 pixels
                 urban_structure->illumination_percentage = 1.0f;
                 urban_structure->illumination_pattern_type = 8; // Continuous operational criticality
@@ -1397,6 +1402,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             case 9: // RETAIL SHOPPING COMPLEX (2-6 Stories, Aluminum Framing)
                 urban_structure->floor_quantity = 2 + (rand() % 5);
                 urban_structure->height = urban_structure->floor_quantity * 28.0f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 20.0f + (float)(rand() % 36); // Wider range: 20-56 pixels
                 urban_structure->illumination_percentage = 0.75f;
                 urban_structure->illumination_pattern_type = 9; // Retail business hour cycle
@@ -1405,6 +1411,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             case 10: // CONVENTION EVENT FACILITY (4-12 Stories, Exhibition Architecture)
                 urban_structure->floor_quantity = 4 + (rand() % 9);
                 urban_structure->height = urban_structure->floor_quantity * 23.0f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 29.0f + (float)(rand() % 30); // Wider range: 29-59 pixels
                 urban_structure->illumination_percentage = 0.3f;
                 urban_structure->illumination_pattern_type = 10; // Convention schedule coordination
