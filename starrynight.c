@@ -715,15 +715,16 @@ int main(int argc, char *argv[]) {
             case 's':
                 speed_mult = atof(optarg);
                 break;
-            case 'd':
-                star_density = atof(optarg);
-                if (star_density < 0) star_density = 0;
-                if (star_density > 1) star_density = 1;
-                break;
-            case 'm':
-                meteor_freq = atof(optarg);
-                if (meteor_freq < 0) meteor_freq = 0;
-                if (meteor_freq > 5) meteor_freq = 5;
+
+            case 2: // MEGATOWER CONSTRUCTION (40-80 Stories, Supertall Architectural Monument)
+                urban_structure->floor_quantity = 40 + (rand() % 41);
+                urban_structure->height = urban_structure->floor_quantity * 16.5f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
+                urban_structure->width = 30.0f + (float)(rand() % 40); // Wider range: 30-70 pixels
+                urban_structure->illumination_percentage = 1.0f;
+                urban_structure->illumination_pattern_type = 2; // 24/7 operational criticality
+                urban_structure->aircraft_warning_beacon_present = 1; // Mandatory aviation safety
+                urban_structure->antenna_element_array = 1 + (rand() % 3); // Communication infrastructure
                 break;
             case 'h':
             default:
@@ -1301,14 +1302,19 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
         urban_structure->building_type = architectural_classification;
 
         // BUILDING SPECIFICATION ENGINE - Feature-Driven Architectural Synthesis
-        // Enhanced for cityscape appearance with 40% screen height limits and wider buildings
-        // Maximum height = 40% of available screen space (screen_height-50)
-        float max_building_height = (screen_height - 50) * 0.4f;
+        // Enhanced for cityscape appearance with 20% screen height limits and wider buildings
+        // Maximum height = 20% of available screen space (screen_height-50)
+        float max_building_height = (screen_height - 50) * 0.2f;
 
         switch (architectural_classification) {
+            case -1: // FORCE HEIGHT CAP ENFORCEMENT
+                // This case should never be reached - ensures compiler doesn't complain about unused variable
+                if (max_building_height < 50) max_building_height = 50; // Minimum safe height
+                break;
             case 0: // RESIDENTIAL APARTMENT COMPLEX (2-10 Stories, Balconies/Balconies Design)
                 urban_structure->floor_quantity = 2 + (rand() % 9);
                 urban_structure->height = urban_structure->floor_quantity * 20.0f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 20.0f + (float)(rand() % 30); // Wider range: 20-50 pixels
                 urban_structure->illumination_percentage = 0.7f;
                 urban_structure->illumination_pattern_type = 0; // Residential nighttime energy profile
@@ -1317,6 +1323,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             case 1: // OFFICE FINANCIAL CENTER (15-35 Stories, Glass Curtain Architecture)
                 urban_structure->floor_quantity = 15 + (rand() % 21);
                 urban_structure->height = urban_structure->floor_quantity * 18.0f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 28.0f + (float)(rand() % 35); // Wider range: 28-63 pixels
                 urban_structure->illumination_percentage = 0.9f;
                 urban_structure->illumination_pattern_type = 1; // Business hour diurnal cycle
@@ -1327,6 +1334,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             case 2: // MEGATOWER CONSTRUCTION (40-80 Stories, Supertall Architectural Monument)
                 urban_structure->floor_quantity = 40 + (rand() % 41);
                 urban_structure->height = urban_structure->floor_quantity * 16.5f * 1.2f; // 20% height increase
+                urban_structure->height = (urban_structure->height > max_building_height) ? max_building_height : urban_structure->height; // Cap at 20%
                 urban_structure->width = 30.0f + (float)(rand() % 40); // Wider range: 30-70 pixels
                 urban_structure->illumination_percentage = 1.0f;
                 urban_structure->illumination_pattern_type = 2; // 24/7 operational criticality
