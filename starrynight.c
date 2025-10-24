@@ -214,14 +214,21 @@ int main(int argc, char *argv[]) {
                 update_meteor(&meteors[i], dt * speed_mult, screen_width, screen_height);
             }
         }
+        // Render scene - DISABLE all clearing to eliminate ANY possible fade effects
+        // glClear(GL_COLOR_BUFFER_BIT);
 
-        // Render scene
-        glClear(GL_COLOR_BUFFER_BIT);
+        // Render solid black background first (overrides any previous frame data)
+        glDisable(GL_SCISSOR_TEST);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glBegin(GL_QUADS);
+        glColor3f(0.0f, 0.0f, 0.0f); // ABSOLUTE PURE BLACK
+        glVertex2f(0.0f, 0.0f);
+        glVertex2f(screen_width, 0.0f);
+        glVertex2f(screen_width, screen_height);
+        glVertex2f(0.0f, screen_height);
+        glEnd();
 
-        // Render gradient background
-        render_gradient_background(screen_width, screen_height);
-
-        // Render buildings (solid silhouettes like Dallas skyline)
+        // Render buildings (solid black silhouettes) - made these darker/stronger to ensure visibility
         glColor3f(0.0f, 0.0f, 0.0f); // Pure black buildings
 
         glBegin(GL_QUADS);
