@@ -1366,24 +1366,8 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
             if (s->y > screen_height - 20) s->y = 20;
         }
 
-        // RANDOM BLINK CONTROL: Only twinkle when cooldown expires, using individual star timer
-        s->blink_cooldown -= dt; // Count down the blink interval
-
-        if (s->blink_cooldown <= 0.0f) {
-            // Time to start twinkling - reset blink timer to 5-20 seconds
-            s->blink_cooldown = 5.0f + ((float)rand() / RAND_MAX) * 15.0f; // Next blink interval
-
-            // Advance individual star twinkling timer
-            s->twinkle_timer += dt;
-
-            // Apply slow twinkling brightness with sine wave using individual timer
-            float twinkle_offset = sinf(s->twinkle_timer * (s->twinkle_speed * 0.5f) + s->twinkle_phase) * 0.4f;
-            s->brightness = s->base_brightness + twinkle_offset;
-        } else {
-            // Blink cooldown active - reset twinkling timer and maintain steady base brightness only
-            s->twinkle_timer = 0.0f; // Reset twinkling timer during cooldown
-            s->brightness = s->base_brightness; // No twinkling during cooldown
-        }
+        // TWINKLING DISABLED: Stars maintain constant base brightness
+        s->brightness = s->base_brightness; // No twinkling at all
 
         // Clamp brightness
         if (s->brightness < 0.2f) s->brightness = 0.2f;
