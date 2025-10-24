@@ -29,6 +29,8 @@
 #define METEOR_PARTICLES 20
 #define CITY_BUILDINGS 6     // Number of solid buildings with windows
 
+float building_spacing; // Global building spacing
+
 // Predefined building templates (relative to building position)
 // Each building has a set of light positions that get filled over time
 typedef struct {
@@ -289,7 +291,12 @@ int main(int argc, char *argv[]) {
         // Render scene - DISABLE all clearing to eliminate ANY possible fade effects
         // glClear(GL_COLOR_BUFFER_BIT);
 
-        // Render solid black background first (overrides any previous frame data)
+        // Clear stencil buffer to 0 for masking
+        glClearStencil(0);
+        glStencilMask(0xFF);
+        glClear(GL_STENCIL_BUFFER_BIT);
+
+        // Render solid black background first
         glDisable(GL_SCISSOR_TEST);
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
         glBegin(GL_QUADS);
@@ -300,46 +307,71 @@ int main(int argc, char *argv[]) {
         glVertex2f(0.0f, screen_height);
         glEnd();
 
-        // Render buildings with solid silhouettes and randomly lighting windows
+        // SETUP STENCIL FOR BUILDING MASKING
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);  // Disable color writing
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);  // Write 1 to stencil where buildings are
+        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+        // Draw building masks to stencil buffer (invisible on screen)
         for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
             float build_x_start = (float)screen_width * build_idx / CITY_BUILDINGS + 30;
             float build_width = ((float)screen_width / CITY_BUILDINGS) - 60;
-            float build_height = 150.0f + (float)(rand() % build_idx * 50); // Vary height by position
-            float build_y_start = 50.0f; // From bottom
+            float build_height = 150.0f + (float)(build_idx * 50);
+            float build_y_start = 50.0f;
 
-            // Draw building silhouette (solid black)
-            glColor3f(0.0f, 0.0f, 0.0f); // Pure black buildings
             glBegin(GL_QUADS);
             glVertex2f(build_x_start, build_y_start);
             glVertex2f(build_x_start + build_width, build_y_start);
             glVertex2f(build_x_start + build_width, build_y_start + build_height);
             glVertex2f(build_x_start, build_y_start + build_height);
             glEnd();
+        }
 
-            // Draw tiny windows (2x2 pixels each)
-            int windows_per_row = (int)build_width / 8; // Small windows
+        // ENABLE STENCIL MASKING - only render where stencil is 0 (not buildings)
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);  // Re-enable color writing
+        glStencilFunc(GL_EQUAL, 0, 0xFF);  // Only render where stencil is 0
+        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+        // Render stars only where stencil allows (not behind buildings) - CREATES SILHOUETTES
+        render_stars(stars, actual_star_count, screen_width, screen_height);
+
+        // Disable stencil test temporarily for meteors and windows
+        glDisable(GL_STENCIL_TEST);
+
+        // Render meteors
+        for (int i = 0; i < METEOR_COUNT; i++) {
+            if (meteors[i].life > 0) {
+                render_meteor(&meteors[i], screen_width, screen_height);
+            }
+        }
+
+        // Render lit windows on TOP of building silhouettes
+        for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
+            float build_x_start = (float)screen_width * build_idx / CITY_BUILDINGS + 30;
+            float build_width = ((float)screen_width / CITY_BUILDINGS) - 60;
+            float build_height = 150.0f + (float)(build_idx * 50);
+            float build_y_start = 50.0f;
+
+            // Draw tiny lit windows
+            int windows_per_row = (int)build_width / 8;
             int window_rows = (int)build_height / 12;
-            int window_offset = rand() % CITY_BUILDINGS; // Vary pattern per building
+            int window_offset = build_idx * 3; // Consistent offset per building
 
             for (int row = 0; row < window_rows; row++) {
                 for (int col = 0; col < windows_per_row; col++) {
                     float window_x = build_x_start + col * 8 + 3;
                     float window_y = build_y_start + row * 12 + 8;
 
-                    // Calculate which window in the overall sequence
                     int window_idx = (build_idx * 20) + (row * windows_per_row + col);
-                    float light_phase = sinf(current_time * 0.001f + (float)window_idx * 0.2f + window_offset);
 
-                    // Windows gradually light up based on time and random factors
-                    bool is_lit = (light_phase > -0.5f + cosf(window_idx) * 0.3f) &&
-                                  (rand() % 100 < 5); // Small chance to light up randomly
+                    // Random chance windows light up (5% chance per frame per window)
+                    bool is_lit = (rand() % 100 < 5);
 
                     if (is_lit) {
-                        // Lit window (warm yellow)
-                        float brightness = 0.7f + sinf(current_time * 0.004f + window_idx) * 0.3f;
-                        glColor4f(1.0f, 0.9f, brightness * 0.6f, brightness);
+                        // Warm yellow apartment light
+                        glColor4f(1.0f, 0.9f, 0.8f, 1.0f);
 
-                        // Small window rectangle (2x4 pixels)
+                        // Small square window
                         glBegin(GL_QUADS);
                         glVertex2f(window_x, window_y);
                         glVertex2f(window_x + 3, window_y);
@@ -350,16 +382,6 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-
-        // Render meteors (behind stars for depth)
-        for (int i = 0; i < METEOR_COUNT; i++) {
-            if (meteors[i].life > 0) {
-                render_meteor(&meteors[i], screen_width, screen_height);
-            }
-        }
-
-        // Render stars
-        render_stars(stars, actual_star_count, screen_width, screen_height);
 
         // Swap buffers
         SDL_GL_SwapWindow(window);
@@ -405,6 +427,10 @@ void init_opengl(int width, int height) {
     // Point smoothing for star glow
     glEnable(GL_POINT_SMOOTH);
     glPointSize(1.0f);
+
+    // Enable stencil buffer for building masks
+    glEnable(GL_STENCIL_TEST);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
     // Disable depth test for 2D rendering
     glDisable(GL_DEPTH_TEST);
