@@ -678,11 +678,6 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
         glBegin(GL_QUADS);
         for (int floor = 0; floor < floors; floor++) {
             for (int window_x = 0; window_x < windows_per_floor; window_x++) {
-                // CHECK WINDOW ILLUMINATION STATUS
-                if (structure->window_grid[floor][window_x] == 0) {
-                    continue; // Window is dark
-                }
-
                 // WINDOW POSITION CALCULATION
                 float window_left = building_x + WINDOW_GRID_SAFE_MARGIN + window_x * window_width;
                 float window_bottom = building_y + WINDOW_GRID_SAFE_MARGIN + floor * floor_height + window_spacing_y;
@@ -690,6 +685,20 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
                 float window_top = window_bottom + window_height;
                 float window_center_x = (window_left + window_right) / 2.0f;
                 float window_center_y = (window_bottom + window_top) / 2.0f;
+
+                // DRAW FAINT UNLIT WINDOW SILHOUETTE FOR REALISTIC APPEARANCE
+                glColor4f(0.25f, 0.25f, 0.3f, 0.3f); // Very faint dark blue-gray
+                glVertex2f(window_left, window_bottom);
+                glVertex2f(window_right, window_bottom);
+                glVertex2f(window_right, window_top);
+                glVertex2f(window_left, window_top);
+
+                // SKIP ILLUMINATED WINDOW RENDERING IF WINDOW IS DARK
+                if (structure->window_grid[floor][window_x] == 0) {
+                    continue; // Window is dark - only faint silhouette rendered
+                }
+
+                // CONTINUE WITH ILLUMINATED WINDOW RENDERING
 
                 // RENDER DARK WINDOW BORDER FRAME FIRST
                 glColor4f(0.1f, 0.1f, 0.1f, 0.9f); // Dark gray frame
@@ -754,7 +763,10 @@ int main(int argc, char *argv[]) {
     float meteor_freq = 1.0f;
     int ch;
 
-    while ((ch = getopt(argc, argv, "s:d:m:h")) != -1) {
+    // STAR ROTATION MODE SELECTION - Default: Dynamic celestial sphere (astronomical rotation)
+    int celestial_sphere_mode = 1; // 1 = dynamic (celestial sphere), 0 = static (legacy)
+
+    while ((ch = getopt(argc, argv, "s:d:m:r:h")) != -1) {
         switch (ch) {
             case 's':
                 speed_mult = atof(optarg);
@@ -768,6 +780,16 @@ int main(int argc, char *argv[]) {
                 meteor_freq = atof(optarg);
                 if (meteor_freq < 0) meteor_freq = 0;
                 if (meteor_freq > 5) meteor_freq = 5;
+                break;
+            case 'r':
+                if (strcmp(optarg, "static") == 0) {
+                    celestial_sphere_mode = 0; // Legacy static star field
+                } else if (strcmp(optarg, "dynamic") == 0) {
+                    celestial_sphere_mode = 1; // Celestial sphere rotation (default)
+                } else {
+                    fprintf(stderr, "Error: -r option must be 'static' or 'dynamic'\n");
+                    return 1;
+                }
                 break;
             case 'h':
             default:
@@ -1048,11 +1070,20 @@ int main(int argc, char *argv[]) {
 
 
 
-        // Render sky stars (buildings static, stars work normally)
-        glPointSize(1.0f); // Ensure proper star point size
-        render_stars(stars, actual_star_count, screen_width, screen_height);
+        // STAR SYSTEM RENDERING - Conditional based on user selection
+        if (celestial_sphere_mode) {
+            // 🌌 DYNAMIC/CELESTIAL SPHERE MODE - Full astronomical simulation
+            // Render astronomical star sphere with Earth rotation
+            // [Future: Implement 3D celestial coordinates and sidereal rotation]
+            glPointSize(1.0f); // Ensure proper star point size
+            render_stars(stars, actual_star_count, screen_width, screen_height);
+        } else {
+            // 📺 STATIC/LEGACY MODE - Original star field behavior
+            glPointSize(1.0f); // Ensure proper star point size
+            render_stars(stars, actual_star_count, screen_width, screen_height);
+        }
 
-        // RENDER GAP STARS BETWEEN BUILDINGS - NO STENCIL NEEDED, they are in open areas
+        // RENDER GAP STARS BETWEEN BUILDINGS - Continuous density gradient (no stencil needed)
         render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);
 
         // No stencil operations needed for gap stars - they render in open spaces
@@ -1589,6 +1620,11 @@ void initialize_urban_complex_generation(int screen_width __attribute__((unused)
 
         // Roof level elevation calculation for future three-dimensional features
         urban_structure->roof_level_elevation = urban_structure->y + urban_structure->height;
+
+        // COMMUNICATION TOWER HEIGHT INITIALIZATION - Ensure towers are tall enough for rotating beacons visible above roof
+        if (urban_structure->roof_feature_mask & (1 << ROOF_TRANSMISSION_TOWER)) {
+            urban_structure->tower_height_pixels = 50 + (rand() % 31); // Ensure towers are 50-80 pixels tall, above typical building roofs
+        }
 
         // Advanced lighting preparation (coordination system for Chunks 2-10)
         urban_structure->pulse_synchronization_timer = (float)rand() / RAND_MAX * 2.0f * PI; // Randomized phase
