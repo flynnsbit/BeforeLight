@@ -1018,16 +1018,18 @@ int main(int argc, char *argv[]) {
         glStencilFunc(GL_EQUAL, 0, 0xFF);  // Only render where stencil is 0
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-        // RENDER THIN WHITE BUILDING OUTLINES - Subtle edge definition for all structures
+        // RENDER THIN WHITE BUILDING OUTLINES - Subtle edge definition for all structures (aligned with windows)
         glColor4f(1.0f, 1.0f, 1.0f, 0.8f); // White, semi-transparent for subtle definition
         glLineWidth(1.0f); // Thinnest possible line
 
-        for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-            Building *building = &buildings[build_idx];
-            float x1 = building->x;
-            float y1 = building->y;
-            float x2 = building->right_edge;
-            float y2 = building->y + building->height;
+        for (int build_idx = 0; build_idx < MAX_URBAN_BUILDINGS; build_idx++) {
+            UrbanBuilding *structure = &urban_complex[build_idx];
+            if (structure->floor_quantity <= 0) continue; // Skip uninitialized buildings
+
+            float x1 = structure->x;
+            float y1 = structure->y;
+            float x2 = structure->x + structure->width;
+            float y2 = structure->y + structure->height;
 
             glBegin(GL_LINES);
             // Top horizontal
@@ -1303,7 +1305,7 @@ void render_meteor(Meteor *meteor, int screen_width __attribute__((unused)), int
  * URBAN BUILDING INITIALIZATION FUNCTION (Chunk 1 Core Implementation)
  * Generates sophisticated architectural configurations with building archetypes
  */
-void initialize_urban_complex_generation(int screen_width, int screen_height __attribute__((unused))) {
+void initialize_urban_complex_generation(int screen_width __attribute__((unused)), int screen_height __attribute__((unused))) {
     for (int build_index = 0; build_index < MAX_URBAN_BUILDINGS; build_index++) {
         UrbanBuilding* urban_structure = &urban_complex[build_index];
 
