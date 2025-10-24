@@ -667,12 +667,12 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
         windows_per_floor = (windows_per_floor > MAX_WINDOW_GRID_WIDTH) ?
             MAX_WINDOW_GRID_WIDTH : windows_per_floor;
 
-        // WINDOW DIMENSIONS AND SPACING
+        // WINDOW DIMENSIONS AND SPACING - Smaller windows for more realistic appearance
         float available_width = building_width - (WINDOW_GRID_SAFE_MARGIN * 2.0f);
         float window_width = available_width / windows_per_floor;
         float floor_height = building_height / floors;
-        float window_height = floor_height * 0.7f; // Windows occupy 70% of floor height
-        float window_spacing_y = floor_height * 0.15f; // Vertical spacing between floors
+        float window_height = floor_height * 0.5f; // Windows occupy 50% of floor height (smaller)
+        float window_spacing_y = floor_height * 0.25f; // Vertical spacing between floors
 
         // ILLUMINATED WINDOW RENDERING
         glColor4f(0.95f, 0.9f, 0.6f, 0.9f); // Warm interior light (slightly yellow)
@@ -752,6 +752,9 @@ int main(int argc, char *argv[]) {
     // Initialize sophisticated urban building data architecture
     initialize_urban_complex_generation(screen_width, screen_height);
     establish_urban_lighting_infrastructure();
+
+    // DYNAMIC WINDOW ILLUMINATION UPDATE TIMER - For random on/off transitions
+    float window_update_timer = 0.0f;
 
     // PRE-CALCULATE ALL BUILDING PROPERTIES - ONLY ONCE AT STARTUP
     // NOW WITH VARIABLE WIDTHS (UP TO 50% WIDER)
@@ -938,6 +941,33 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < METEOR_COUNT; i++) {
             if (meteors[i].life > 0) {
                 update_meteor(&meteors[i], dt * speed_mult, screen_width, screen_height);
+            }
+        }
+
+        // WINDOW RANDOM ILLUMINATION UPDATE - Every 5 seconds toggle some windows randomly
+        window_update_timer += dt;
+        if (window_update_timer >= 5.0f) { // 5 second interval
+            window_update_timer = 0.0f; // Reset timer
+
+            // Randomly select and toggle several windows across buildings
+            for (int toggle_count = 0; toggle_count < 15; toggle_count++) { // Toggle 15 windows each time
+                int random_building = rand() % MAX_URBAN_BUILDINGS;
+                UrbanBuilding* structure = &urban_complex[random_building];
+
+                // Only toggle windows for buildings that have been initialized
+                if (structure->floor_quantity > 0 && structure->window_count_horizontal > 0) {
+                    int max_floors = (structure->floor_quantity < MAX_WINDOW_GRID_HEIGHT) ?
+                        structure->floor_quantity : MAX_WINDOW_GRID_HEIGHT;
+                    int max_windows = (structure->window_count_horizontal < MAX_WINDOW_GRID_WIDTH) ?
+                        structure->window_count_horizontal : MAX_WINDOW_GRID_WIDTH;
+
+                    int random_floor = rand() % max_floors;
+                    int random_window = rand() % max_windows;
+
+                    // Toggle the window state (0 to 1 or 1 to 0)
+                    structure->window_grid[random_floor][random_window] =
+                        !structure->window_grid[random_floor][random_window];
+                }
             }
         }
 
@@ -1271,7 +1301,10 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
         urban_structure->building_type = architectural_classification;
 
         // BUILDING SPECIFICATION ENGINE - Feature-Driven Architectural Synthesis
-        // Enhanced for cityscape appearance with 20% height increase and wider buildings
+        // Enhanced for cityscape appearance with 40% screen height limits and wider buildings
+        // Maximum height = 40% of available screen space (screen_height-50)
+        float max_building_height = (screen_height - 50) * 0.4f;
+
         switch (architectural_classification) {
             case 0: // RESIDENTIAL APARTMENT COMPLEX (2-10 Stories, Balconies/Balconies Design)
                 urban_structure->floor_quantity = 2 + (rand() % 9);
