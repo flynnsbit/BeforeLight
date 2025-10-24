@@ -1446,21 +1446,27 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
         }
 
         // CHUNK 6: ROOF ARCHITECTURAL ACCESSORY COMPLEXITY
-        // Probability-based assignment of sophisticated roof features (10-15% chance each)
-        if ((rand() % 100) < 12) { // 12% chance for helipads
-            urban_structure->roof_feature_mask |= (1 << ROOF_HELIPAD_PLATFORM);
+        // Limited selection: only 2 unique roof features per building maximum
+        // From 5 possible infrared features: helipads, solar panels, HVAC, religious symbols, surveillance blimps
+        int features_assigned = 0;
+        int feature_options[5] = {
+            ROOF_HELIPAD_PLATFORM, ROOF_SOLAR_PANEL_ARRAY, ROOF_HVAC_UNITS,
+            ROOF_RELIGIOUS_SYMBOLS, ROOF_SURVEILLANCE_BLIMP
+        };
+
+        // Shuffle available features randomly
+        for (int i = 4; i > 0; i--) {
+            int j = rand() % (i + 1);
+            int temp = feature_options[i];
+            feature_options[i] = feature_options[j];
+            feature_options[j] = temp;
         }
-        if ((rand() % 100) < 10) { // 10% chance for solar panels
-            urban_structure->roof_feature_mask |= (1 << ROOF_SOLAR_PANEL_ARRAY);
-        }
-        if ((rand() % 100) < 13) { // 13% chance for HVAC units
-            urban_structure->roof_feature_mask |= (1 << ROOF_HVAC_UNITS);
-        }
-        if ((rand() % 100) < 8) { // 8% chance for religious symbols
-            urban_structure->roof_feature_mask |= (1 << ROOF_RELIGIOUS_SYMBOLS);
-        }
-        if ((rand() % 100) < 6) { // 6% chance for surveillance blimps
-            urban_structure->roof_feature_mask |= (1 << ROOF_SURVEILLANCE_BLIMP);
+
+        // Assign only up to 2 unique features randomly
+        int features_to_assign = (rand() % 3); // 0, 1, or 2 features maximum
+        for (int i = 0; i < features_to_assign && features_assigned < 2; i++) {
+            urban_structure->roof_feature_mask |= (1 << feature_options[i]);
+            features_assigned++;
         }
 
         // Boundary calculation and spatial validation
