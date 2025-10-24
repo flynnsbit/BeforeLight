@@ -786,8 +786,10 @@ int main(int argc, char *argv[]) {
                     celestial_sphere_mode = 0; // Legacy static star field
                 } else if (strcmp(optarg, "dynamic") == 0) {
                     celestial_sphere_mode = 1; // Celestial sphere rotation (default)
+                } else if (strcmp(optarg, "none") == 0) {
+                    celestial_sphere_mode = 2; // No rotation at all - completely still stars
                 } else {
-                    fprintf(stderr, "Error: -r option must be 'static' or 'dynamic'\n");
+                    fprintf(stderr, "Error: -r option must be 'static', 'dynamic', or 'none'\n");
                     return 1;
                 }
                 break;
@@ -1075,7 +1077,7 @@ int main(int argc, char *argv[]) {
             // 🌌 DYNAMIC/CELESTIAL SPHERE MODE - Full astronomical simulation
             // Render astronomical star sphere with Earth rotation (sidereal ~23h56m)
             static float celestial_rotation_angle = 0.0f; // Tracks Earth's rotation
-            celestial_rotation_angle += dt * 0.00000045f; // Time-lapse speed for visibility (100x slower)
+            celestial_rotation_angle += dt * 0.000000000045f; // Very slow perceptible rotation (1000x slower)
 
             glPointSize(1.0f); // Ensure proper star point size
             glBegin(GL_POINTS);
