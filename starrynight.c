@@ -26,7 +26,7 @@
 #define PI 3.14159265359f
 #define STAR_COUNT 500  // Space for drifting sky stars only
 #define GAP_STAR_COUNT 10000  // Stars specifically in gaps between buildings
-#define METEOR_COUNT 20
+#define METEOR_COUNT 10
 #define METEOR_PARTICLES 20
 #define CITY_BUILDINGS 13     // Number of solid buildings with windows
 
@@ -982,13 +982,15 @@ int main(int argc, char *argv[]) {
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
         // Draw building masks to stencil buffer (invisible on screen)
-        // NOTE: Now using PRE-CALCULATED STATIC building properties (no flicker!)
-        for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-            Building *building = &buildings[build_idx];
-            float build_x_start = building->x;
-            float build_y_start = building->y;
-            float build_width = building->width;
-            float build_height = building->height;
+        // Using dynamic urban_complex data instead of removed static array
+        for (int build_idx = 0; build_idx < MAX_URBAN_BUILDINGS; build_idx++) {
+            UrbanBuilding *structure = &urban_complex[build_idx];
+            if (structure->floor_quantity <= 0) continue; // Skip uninitialized buildings
+
+            float build_x_start = structure->x;
+            float build_y_start = structure->y;
+            float build_width = structure->width;
+            float build_height = structure->height;
 
             glBegin(GL_QUADS);
             glVertex2f(build_x_start, build_y_start);
