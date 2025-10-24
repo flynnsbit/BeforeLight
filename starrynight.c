@@ -756,24 +756,8 @@ int main(int argc, char *argv[]) {
     // DYNAMIC WINDOW ILLUMINATION UPDATE TIMER - For random on/off transitions
     float window_update_timer = 0.0f;
 
-    // PRE-CALCULATE ALL BUILDING PROPERTIES - ONLY ONCE AT STARTUP
-    // NOW WITH VARIABLE WIDTHS (UP TO 50% WIDER)
-    for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-        float spacing = (float)screen_width / CITY_BUILDINGS;
-        float random_offset = (float)(rand() % (int)(spacing * 0.6f) - spacing * 0.3f);
-
-        // Store static building properties
-        buildings[build_idx].x = (float)build_idx * spacing + random_offset + 15;
-
-        // VARIABLE WIDTHS: from base (12-32px) up to 50% wider for architectural variation
-        float base_width = (float)(12 + rand() % 20); // 12-32 pixels
-        float width_multiplier = 1.25f + (float)rand() / RAND_MAX * 0.75f; // 1.25-2.0x (25-50% wider)
-        buildings[build_idx].width = base_width * width_multiplier; // 15-64 pixels wide
-
-        buildings[build_idx].height = 120.0f + (float)(rand() % 150); // 120-270 pixels tall
-        buildings[build_idx].y = 50.0f; // From bottom - all buildings align at same y
-        buildings[build_idx].right_edge = buildings[build_idx].x + buildings[build_idx].width;
-    }
+// LEGACY STATIC BUILDING PRECALCULATION REMOVED
+// All buildings now dynamically generated in urban_complex with proper urban planning
 
     // CALCULATE CONTINUOUS STAR FIELD ACROSS ENTIRE SCREEN WIDTH
     // Stars will be positioned across full horizontal range with vertical density control
@@ -786,10 +770,11 @@ int main(int argc, char *argv[]) {
     int star_idx = 0;
 
     // Find the maximum building height to determine blend zones
+    // Use the dynamic urban_complex instead of static buildings array
     float max_building_height = 0.0f;
-    for (int i = 0; i < CITY_BUILDINGS; i++) {
-        if (buildings[i].height > max_building_height) {
-            max_building_height = buildings[i].height;
+    for (int i = 0; i < MAX_URBAN_BUILDINGS; i++) {
+        if (urban_complex[i].height > max_building_height) {
+            max_building_height = urban_complex[i].height;
         }
     }
 
@@ -798,7 +783,7 @@ int main(int argc, char *argv[]) {
     // Zone 2: Above building tops (gradually decreasing)
     // Zone 3: Upper atmosphere (matching sky density)
 
-    float building_top_level = buildings[0].y + max_building_height; // Top of tallest building
+    float building_top_level = urban_complex[0].y + max_building_height; // Top of tallest building
     float zone2_end = building_top_level + (max_building_height * 0.5f); // 50% above buildings
     float zone3_start = screen_height / 4; // Where sky stars begin
 
@@ -815,7 +800,7 @@ int main(int argc, char *argv[]) {
 
         if (rand_val < 0.6f) {
             // 60% of stars in dense building level zone (near ground, between buildings)
-            star->y = buildings[0].y + rand_val / 0.6f * max_building_height;
+            star->y = urban_complex[0].y + rand_val / 0.6f * max_building_height;
         } else if (rand_val < 0.9f) {
             // 30% of stars in medium density zone (above building tops)
             float zone_progress = (rand_val - 0.6f) / 0.3f; // 0-1 in this zone
