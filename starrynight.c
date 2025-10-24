@@ -24,9 +24,15 @@
 #include <stdbool.h>
 
 #define PI 3.14159265359f
-#define STAR_COUNT 750  // Between 500-1000 for performance
+#define STAR_COUNT 600  // Focus more on city formation than density
 #define METEOR_COUNT 10
 #define METEOR_PARTICLES 20
+#define CITY_LINE_HEIGHT 80  // Height of permanent city line
+#define CITY_BUILDINGS 25    // Clear building positions to fill
+
+// Global building positions array
+float building_positions[CITY_BUILDINGS * 3];  // x, y, filled (0=empty, 1=filled)
+float building_spacing; // Will be set in main
 
 typedef struct {
     float x, y;           // Position in pixels
@@ -136,6 +142,15 @@ int main(int argc, char *argv[]) {
     // SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
     SDL_ShowCursor(0);  // Hide mouse cursor
 
+    // Initialize predefined building positions for permanent city line (global array)
+    building_spacing = (float)screen_width / CITY_BUILDINGS;
+    for (int i = 0; i < CITY_BUILDINGS; i++) {
+        // Base positions for buildings
+        building_positions[i * 3] = i * building_spacing + building_spacing * 0.5f;  // x position
+        building_positions[i * 3 + 1] = screen_height - 40 - ((float)(rand() % 3) * 20);  // y position (different heights)
+        building_positions[i * 3 + 2] = 0;  // 0 = not filled yet
+    }
+
     // Initialize star system - adjust count based on density setting
     int actual_star_count = (int)(STAR_COUNT * (0.3f + star_density * 0.7f)); // 225-750 stars
     Star *stars = (Star *)malloc(actual_star_count * sizeof(Star));
@@ -177,9 +192,9 @@ int main(int argc, char *argv[]) {
         // Update stars
         update_stars(stars, actual_star_count, dt * speed_mult, screen_width, screen_height);
 
-        // Update and handle meteors
+        // Update and handle meteors - much more frequent for visibility
         meteor_timer += dt * speed_mult;
-        float meteor_interval = 60.0f / meteor_freq; // Base interval of 60 seconds, adjusted by frequency
+        float meteor_interval = 3.0f / meteor_freq; // Base interval of 3 seconds, adjusted by frequency
 
         if (meteor_timer >= meteor_interval) {
             meteor_timer -= meteor_interval;
@@ -305,14 +320,31 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
             if (s->x < 0) s->x = screen_width;
             if (s->x > screen_width) s->x = 0;
 
-            // Check if bright star should settle into skyline
-            if (s->is_bright && s->y > screen_height - 100 && rand() % 100 < 2) { // Random chance when near bottom
-                s->settled = true;
-                s->settled_layer = rand() % 3; // 0,1,2 layers for different heights
-                s->y = screen_height - 30 - s->settled_layer * 25; // Position in skyline layers
-                s->vx = 0; // Stop horizontal movement
-                s->vy = 0; // Stop vertical movement
-                s->base_brightness = 0.8f; // Brighten settled stars (city lights)
+            // Check if bright star should settle into permanent city line - find nearest empty building position
+            if (s->is_bright && (s->y > screen_height - 200 || rand() % 200 < 1)) { // Frequent settling
+                // Find nearest empty building position
+                int nearest_idx = -1;
+                float min_distance = screen_width;
+                for (int j = 0; j < CITY_BUILDINGS; j++) {
+                    if (building_positions[j * 3 + 2] == 0) { // Not filled
+                        float distance = fabsf(building_positions[j * 3] - s->x);
+                        if (distance < min_distance) {
+                            min_distance = distance;
+                            nearest_idx = j;
+                        }
+                    }
+                }
+
+                if (nearest_idx >= 0 && min_distance < building_spacing * 0.8f) { // Close enough
+                    s->settled = true;
+                    s->x = building_positions[nearest_idx * 3];     // Snap to exact position
+                    s->y = building_positions[nearest_idx * 3 + 1]; // Building height
+                    building_positions[nearest_idx * 3 + 2] = 1;    // Mark as filled
+                    s->vx = 0; // Stop movement
+                    s->vy = 0;
+                    s->base_brightness = 0.95f; // Very bright city lights
+                    s->brightness = s->base_brightness;
+                }
             }
         }
 
@@ -372,9 +404,17 @@ void render_stars(Star *stars, int count, int screen_width, int screen_height) {
 }
 
 void render_gradient_background(int screen_width, int screen_height) {
-    // Solid black background for city skyline effect
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);  // Pure black
-    glClear(GL_COLOR_BUFFER_BIT);
+    // Completely disable any fading - pure solid black background
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+    glBegin(GL_QUADS);
+    glColor3f(0.0f, 0.0f, 0.0f); // Pure black
+    glVertex2f(0.0f, 0.0f);
+    glVertex2f(screen_width, 0.0f);
+    glVertex2f(screen_width, screen_height);
+    glVertex2f(0.0f, screen_height);
+    glEnd();
 }
 
 void init_meteor(Meteor *meteor, int screen_width, int screen_height) {
