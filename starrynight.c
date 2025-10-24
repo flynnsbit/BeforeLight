@@ -1000,32 +1000,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // WINDOW RANDOM ILLUMINATION UPDATE - Every 0.75 seconds toggle some windows randomly for dynamic lighting effect
-        window_update_timer += dt;
-        if (window_update_timer >= 0.75f) { // 0.75 second interval - faster, more visible activity
-            window_update_timer = 0.0f; // Reset timer
-
-            // Randomly select and toggle several windows across buildings (slightly more than before)
-            for (int toggle_count = 0; toggle_count < 25; toggle_count++) { // Toggle 25 windows each time
-                int random_building = rand() % MAX_URBAN_BUILDINGS;
-                UrbanBuilding* structure = &urban_complex[random_building];
-
-                // Only toggle windows for buildings that have been initialized
-                if (structure->floor_quantity > 0 && structure->window_count_horizontal > 0) {
-                    int max_floors = (structure->floor_quantity < MAX_WINDOW_GRID_HEIGHT) ?
-                        structure->floor_quantity : MAX_WINDOW_GRID_HEIGHT;
-                    int max_windows = (structure->window_count_horizontal < MAX_WINDOW_GRID_WIDTH) ?
-                        structure->window_count_horizontal : MAX_WINDOW_GRID_WIDTH;
-
-                    int random_floor = rand() % max_floors;
-                    int random_window = rand() % max_windows;
-
-                    // Toggle the window state (0 to 1 or 1 to 0)
-                    structure->window_grid[random_floor][random_window] =
-                        !structure->window_grid[random_floor][random_window];
-                }
-            }
-        }
+        // WINDOW ILLUMINATION DISABLED - Keep windows in initial static state
+        // No more random toggling to eliminate blinking window effects
 
         // BUILDING LIGHT FILLING SYSTEM REMOVED - No more gradual light increases
         // Render scene - DISABLE all clearing to eliminate ANY possible fade effects
