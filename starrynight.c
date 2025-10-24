@@ -950,12 +950,19 @@ int main(int argc, char *argv[]) {
         update_stars(stars, actual_star_count, dt * speed_mult, screen_width, screen_height);
         update_stars(gap_stars, GAP_STAR_COUNT, dt * speed_mult, screen_width, screen_height);
 
-        // Update and handle meteors - much more frequent for visibility
+        // Update and handle meteors - random intervals between 5-20 seconds for dramatic effect
         meteor_timer += dt * speed_mult;
-        float meteor_interval = 1.0f / meteor_freq; // Base interval of 1 second, adjusted by frequency
 
-        if (meteor_timer >= meteor_interval) {
-            meteor_timer -= meteor_interval;
+        // Check if it's time to spawn a meteor (random 5-20 second intervals)
+        static float next_meteor_in_seconds = 0.0f;
+
+        if (next_meteor_in_seconds == 0.0f) {
+            // Initialize first meteor delay on startup
+            next_meteor_in_seconds = 5.0f + ((float)rand() / RAND_MAX) * 15.0f; // 5-20 seconds
+        }
+
+        if (meteor_timer >= next_meteor_in_seconds) {
+            meteor_timer = 0.0f; // Reset timer
 
             // Find inactive meteor to activate
             for (int i = 0; i < METEOR_COUNT; i++) {
@@ -964,6 +971,9 @@ int main(int argc, char *argv[]) {
                     break;
                 }
             }
+
+            // Set next meteor to spawn 5-20 seconds from now
+            next_meteor_in_seconds = 5.0f + ((float)rand() / RAND_MAX) * 15.0f; // 5-20 seconds
         }
 
         // Update active meteors
