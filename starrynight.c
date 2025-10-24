@@ -1445,60 +1445,78 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             urban_structure->roof_feature_mask |= (1 << ROOF_MAINTENANCE_CRANE);
         }
 
-        // GLOBAL ROOFTOP INFRASTRUCTURE CONSTRAINT - Ultra-Limited Assignment
-        // Only 2 buildings maximum per infrastructure type across entire screen
-        // This creates sparse, realistic urban infrastructure distribution (10 buildings total with infrastructure)
+        // ULTRA-SPARSE ROOFTOP INFRASTRUCTURE PLACEMENT - Ultimate Realism
+        // Exactly 2 infrastructure items per type = 10 total objects across entire screen
+        // No building gets more than one item, distributed like real-world city planning
 
-        // Global feature tracking arrays - static so they persist across building generation
-        static int building_assignments[MAX_URBAN_BUILDINGS]; // Track which buildings get what
-        static int assignments_initialized = 0;
+        // Global infrastructure placement array - 10 slots for individual items
+        static int infrastructure_placements[10]; // Index 0-1: antennas, 2-3: towers, etc.
+        static int placements_initialized = 0;
 
-        // Initialize global assignments on first building generation
-        if (assignments_initialized == 0) {
-            // Reset assignments
+        // Initialize the 10 infrastructure placements on first building generation
+        if (placements_initialized == 0) {
+            // Track which buildings are already occupied
+            static int occupied_buildings[MAX_URBAN_BUILDINGS];
             for (int i = 0; i < MAX_URBAN_BUILDINGS; i++) {
-                building_assignments[i] = -1; // -1 = no assignment
+                occupied_buildings[i] = 0; // 0 = available
             }
 
-            // Assign exactly 2 buildings per feature type (total: 10 buildings with infrastructure)
-            for (int feature_idx = 0; feature_idx < 5; feature_idx++) {
-                for (int assignment = 0; assignment < 2; assignment++) {
-                    // Find an unassigned building randomly
+            // Infrastructure placement logic (feature_types no longer needed in new system)
+
+            for (int type_idx = 0; type_idx < 5; type_idx++) {
+                for (int instance = 0; instance < 2; instance++) { // 2 per type
+                    // Array index: type 0 slots 0-1, type 1 slots 2-3, etc.
+                    int placement_slot = type_idx * 2 + instance;
+
+                    // Find an unassigned building
                     int building_attempts = 0;
                     while (building_attempts < MAX_URBAN_BUILDINGS) {
                         int candidate_building = rand() % MAX_URBAN_BUILDINGS;
-
-                        // Skip if already assigned or if this building already has a different feature
-                        if (building_assignments[candidate_building] == -1) {
-                            building_assignments[candidate_building] = feature_idx;
+                        if (occupied_buildings[candidate_building] == 0) {
+                            occupied_buildings[candidate_building] = 1; // Mark as occupied
+                            infrastructure_placements[placement_slot] = candidate_building;
                             break;
                         }
-
                         building_attempts++;
                     }
                 }
             }
 
-            assignments_initialized = 1;
+            placements_initialized = 1;
         }
 
-        // Check if this specific building was pre-assigned a feature
-        if (building_assignments[build_index] != -1) {
-            int assigned_feature = building_assignments[build_index];
-            int feature_type = -1;
+        // Check if this building is assigned to host any infrastructure item
+        for (int placement_idx = 0; placement_idx < 10; placement_idx++) {
+            if (infrastructure_placements[placement_idx] == build_index) {
+                // This building hosts this infrastructure item
+                int feature_type = -1;
 
-            // Map assignment index to actual feature type
-            switch (assigned_feature) {
-                case 0: feature_type = ROOF_HELIPAD_PLATFORM; break;
-                case 1: feature_type = ROOF_SOLAR_PANEL_ARRAY; break;
-                case 2: feature_type = ROOF_HVAC_UNITS; break;
-                case 3: feature_type = ROOF_RELIGIOUS_SYMBOLS; break;
-                case 4: feature_type = ROOF_SURVEILLANCE_BLIMP; break;
-            }
+                // Determine feature type: 0-1 antennas, 2-3 towers, etc.
+                if (placement_idx < 2) {
+                    feature_type = ROOF_HELIPAD_PLATFORM; // antennas
+                } else if (placement_idx < 4) {
+                    feature_type = ROOF_SOLAR_PANEL_ARRAY; // towers
+                } else if (placement_idx < 6) {
+                    feature_type = ROOF_HVAC_UNITS; // helipads
+                } else if (placement_idx < 8) {
+                    feature_type = ROOF_RELIGIOUS_SYMBOLS; // solar panels
+                } else if (placement_idx < 10) {
+                    feature_type = ROOF_SURVEILLANCE_BLIMP; // religious symbols
+                } else {
+                    feature_type = ROOF_HVAC_UNITS; // blimps (fallback)
+                }
 
-            if (feature_type != -1) {
-                urban_structure->roof_feature_mask |= (1 << feature_type);
+                if (feature_type != -1) {
+                    urban_structure->roof_feature_mask |= (1 << feature_type);
+                }
+                // Each building gets at most one item, so we can break after finding
+                break;
             }
+        }
+
+        // Add a backup tower placement for tall buildings (this is not part of the strict 2-per-type system)
+        if (urban_structure->floor_quantity >= 40 && !(urban_structure->roof_feature_mask)) {
+            urban_structure->roof_feature_mask |= (1 << ROOF_MAINTENANCE_CRANE);
         }
 
         // Boundary calculation and spatial validation
