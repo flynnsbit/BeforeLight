@@ -26,7 +26,7 @@
 #define PI 3.14159265359f
 #define STAR_COUNT 500  // Space for drifting sky stars only
 #define GAP_STAR_COUNT 10000  // Stars specifically in gaps between buildings
-#define METEOR_COUNT 10
+#define METEOR_COUNT 100
 #define METEOR_PARTICLES 20
 #define CITY_BUILDINGS 13     // Number of solid buildings with windows
 
