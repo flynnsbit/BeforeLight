@@ -26,7 +26,7 @@
 #define PI 3.14159265359f
 #define STAR_COUNT 500  // Space for drifting sky stars only
 #define GAP_STAR_COUNT 10000  // Stars specifically in gaps between buildings
-#define METEOR_COUNT 10
+#define METEOR_COUNT 20
 #define METEOR_PARTICLES 20
 #define CITY_BUILDINGS 13     // Number of solid buildings with windows
 
@@ -923,7 +923,7 @@ int main(int argc, char *argv[]) {
 
         // Update and handle meteors - much more frequent for visibility
         meteor_timer += dt * speed_mult;
-        float meteor_interval = 3.0f / meteor_freq; // Base interval of 3 seconds, adjusted by frequency
+        float meteor_interval = 1.0f / meteor_freq; // Base interval of 1 second, adjusted by frequency
 
         if (meteor_timer >= meteor_interval) {
             meteor_timer -= meteor_interval;
@@ -1478,15 +1478,24 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
                 // This building hosts this infrastructure item
                 int feature_type = -1;
 
-                // ULTRA-SPARSE ASSIGNMENT: slots 0-1 = antennas, slots 2-3 = towers only
-                // All other rooftop features removed for minimal realism (3 and up unused)
+                // EXPANDED ULTRA-SPARSE ASSIGNMENT: All infrastructure types with 2 per type total
+                // slots 0-1 = antennas, 2-3 = towers, 4 = helipad, 5 = solar, 6 = HVAC, 7 = religious, 8 = blimp, 9 = water tower
                 if (placement_idx == 0 || placement_idx == 1) {
                     feature_type = ROOF_TRANSMISSION_TOWER; // Antennas on towers
                 } else if (placement_idx == 2 || placement_idx == 3) {
-                    feature_type = ROOF_TRANSMISSION_TOWER; // Separate towers
-                } else {
-                    // No features for slots 4-9 to maintain ultra-sparse appearance
-                    break;
+                    feature_type = ROOF_TRANSMISSION_TOWER; // Separate tower structures
+                } else if (placement_idx == 4) {
+                    feature_type = ROOF_HELIPAD_PLATFORM; // Helipad
+                } else if (placement_idx == 5) {
+                    feature_type = ROOF_SOLAR_PANEL_ARRAY; // Solar panels
+                } else if (placement_idx == 6) {
+                    feature_type = ROOF_HVAC_UNITS; // HVAC equipment
+                } else if (placement_idx == 7) {
+                    feature_type = ROOF_RELIGIOUS_SYMBOLS; // Religious crosses
+                } else if (placement_idx == 8) {
+                    feature_type = ROOF_SURVEILLANCE_BLIMP; // Surveillance blimp
+                } else if (placement_idx == 9) {
+                    feature_type = ROOF_RESERVOIR_TOWER; // Water tower
                 }
 
                 if (feature_type != -1) {
