@@ -30,6 +30,35 @@
 #define METEOR_PARTICLES 20
 #define CITY_BUILDINGS 13     // Number of solid buildings with windows
 
+// ADVANCED URBAN SYSTEM DEFINES (Chunk 1 Implementation)
+#define MAX_URBAN_BUILDINGS 13
+#define LIGHTING_SYSTEM_LIMIT 300
+#define ROOF_FEATURE_ARRAYS 15
+
+// ROOF FEATURE DEFINITIONS - Bitmask Constants
+#define ROOF_RESERVOIR_TOWER   0
+#define ROOF_TRANSMISSION_TOWER 1
+#define ROOF_AERIAL_PLATFORM   2
+#define ROOF_MAINTENANCE_CRANE 3
+#define ROOF_VENTILATIONS      4
+
+// AIRCRAFT WARNING BEACON SPECIFICATIONS (CHUNK 2 Implementation)
+#define AIRCRAFT_BEACON_DIAMETER     7.0f    // 5-10 pixel diameter, using 7
+#define AIRCRAFT_BEACON_BLINK_PERIOD 1.5f    // 1-2 second intervals
+#define AIRCRAFT_BEACON_ACTIVE_TIME  1.0f    // 1 second illumination duration
+
+// WATER TOWER FACILITY SPECIFICATIONS (CHUNK 4 Implementation)
+#define WATER_TOWER_CYLINDER_RADIUS  8.0f    // Base cylinder radius in pixels
+#define WATER_TOWER_CYLINDER_HEIGHT 15.0f   // Main cylinder height
+#define WATER_TOWER_DOME_HEIGHT     6.0f    // Dome cap height
+#define CAUTION_LIGHT_PULSE_FREQ    0.75f   // 0.5-1.0 Hz pulse frequency (1.33s cycle)
+
+// ILLUMINATED WINDOW GRID SPECIFICATIONS (CHUNK 5 Implementation)
+#define MAX_WINDOW_GRID_WIDTH      20       // Maximum windows per floor
+#define MAX_WINDOW_GRID_HEIGHT     32       // Maximum floors per building
+#define WINDOW_GRID_SAFE_MARGIN    3.0f     // Pixel margin from building edges
+#define WINDOW_ILLUMINATION_UPDATE_RATE 0.1f // Update frequency for dynamic illumination
+
 typedef struct {
     float x, y;           // Position in pixels
     float vx, vy;         // Velocity for drift effect
@@ -42,14 +71,96 @@ typedef struct {
     int building_gap;     // Which building gap this star belongs to (-1 for sky)
 } Star;
 
-// Static building properties - calculated once during initialization
+/**
+ * MASTER URBAN BUILDING STRUCTURE - COMPLEX ARCHITECTURAL FRAMEWORK
+ * Foundation for 11 Building Archetypes with Advanced Urban Features
+ */
+typedef struct {
+    // GENERAL GEOMETRY - Core Structural Elements
+    float x, y;                          // Ground floor base position
+    float width, height;                 // Primary building envelope
+    float right_edge;                    // Calculated boundary coordinates
+
+    // ARCHITECTURAL HIERARCHY - Urban Scale Classification
+    int building_type;                   // 0-10 Archetype enumeration
+    int floor_quantity;                  // Story count based on archetype
+    int window_count_horizontal;         // Windows per level specification
+
+    // ILLUMINATION DYNAMICS - Building-Specific Lighting
+    float illumination_percentage;       // 0.0-1.0 occupancy coefficient
+    float brightness_coefficient;        // Buildings scale visibility factor
+    int illumination_pattern_type;       // Residential/commercial differentiation
+
+    // ROOFTOP INFRASTRUCTURE - Advanced Architectural Accessories
+    unsigned int roof_feature_mask;      // Bitmask: antennas, water towers, helipads
+    int antenna_element_array;          // Broadcast transmission components
+    int water_storage_capacity;         // Municipal utility reservoir status
+    int aircraft_warning_beacon_present; // Aviation safety compliance beacons
+
+    // COMMUNICATION TOWER PROPERTIES - Fixed dimensions for stable rendering
+    int tower_height_pixels;            // Tower height in pixels (30-60)
+    int antenna_system_layout;          // Antenna positioning configuration
+
+    // ILLUMINATED WINDOW GRID SYSTEM (CHUNK 5 Implementation)
+    int window_grid[MAX_WINDOW_GRID_HEIGHT][MAX_WINDOW_GRID_WIDTH]; // 2D grid of illuminated windows
+    float current_illumination_level;   // Real-time lighting percentage (animated)
+
+    // OPERATIONAL STATS - Dynamic Performance Indicators
+    float pulse_synchronization_timer;  // Lighting animation coordination
+    int beacon_activation_cycle;        // Current flicker sequence phase
+    int specialty_feature_indicator;    // Building-classified functionality
+
+    // ADVANCED METRICS - Urban Planning Indicators
+    float roof_level_elevation;         // Total height including features
+    float architectural_significance;   // Cultural/historical weighting factor
+
+} UrbanBuilding;
+
+// URBAN LIGHTING MASTER CONTROLLER - Dynamic Illumination System
+typedef struct {
+    float positional_coordinates_x;   // Pixel coordinate precision x
+    float positional_coordinates_y;   // Pixel coordinate precision y
+    float illumination_intensity;      // Brightness modulation (0-1)
+    float temporal_animation_cycle;   // Effects timing synchronization
+    int structural_attachment_index;  // Parent building relationship
+    int illumination_classification;  // Beacon/sign/etc. enumeration
+    int operational_status_flag;      // Active/inactive state management
+
+    // ADVANCED LIGHTING PROPERTIES (Chunk 1 Prepared for Chunks 2-10)
+    float spectral_composition_r;     // RGB composition stack
+    float spectral_composition_g;
+    float spectral_composition_b;
+    float operational_duration_ms;   // Duty cycle specifications
+    float spatial_influence_radius;  // Lighting effect propagation
+    int regulatory_compliance_code;   // Safety/zoning requirement flags
+
+} DynamicLightingElement;
+
+// ROOF ACCESSORY CATALOG DEFINITIONS - Architectural Feature Taxonomy
+typedef struct {
+    const char* architectural_description;     // ANSI text specification
+    int vertical_dimension_requirements;       // Z-axis space allocation
+    int illumination_theme_color_primary;      // Dominant spectral allocation
+    int illumination_theme_color_secondary;    // Auxiliary lighting scheme
+    int collision_detection_volume;           // Physical interference parameters
+    int operational_power_consumption;        // Energy demand calculations
+    int maintenance_service_interval;         // Scheduled upkeep specifications
+
+} RoofArchitecturalAccessory;
+
+// MASTER URBAN ARRAYS - Foundation for Sophisticated Cityscape
+UrbanBuilding urban_complex[MAX_URBAN_BUILDINGS];              // Advanced building repository
+DynamicLightingElement illumination_array[LIGHTING_SYSTEM_LIMIT]; // Urban lighting matrix
+RoofArchitecturalAccessory architectural_catalog[ROOF_FEATURE_ARRAYS]; // Feature ontologies
+
+// Legacy building array for backwards compatibility (remove after full integration)
 typedef struct {
     float x, y;        // Bottom-left position
     float width, height; // Building dimensions
     float right_edge;  // Right edge x coordinate
 } Building;
 
-Building buildings[CITY_BUILDINGS]; // Static building array
+Building buildings[CITY_BUILDINGS]; // Static building array - temporary
 
 // Gap stars - fill spaces between buildings
 Star *gap_stars; // Stars that specifically fill gaps between buildings
@@ -64,7 +175,7 @@ typedef struct {
     int active;           // Currently animating
 } Meteor;
 
-// Function prototypes
+// FUNCTION PROTOTYPES - Extended for Urban System Complexity
 void init_stars(Star *stars, int count, int screen_width, int screen_height);
 void update_stars(Star *stars, int count, float dt, int screen_width, int screen_height);
 void render_stars(Star *stars, int count, int screen_width, int screen_height);
@@ -74,6 +185,163 @@ void render_meteor(Meteor *meteor, int screen_width, int screen_height);
 void update_meteor(Meteor *meteor, float dt, int screen_width, int screen_height);
 void init_opengl(int width, int height);
 void usage(const char *prog);
+
+/**
+ * URBAN BUILDING INITIALIZATION FUNCTION (Chunk 1 Core Implementation)
+ * Generates sophisticated architectural configurations with building archetypes
+ */
+void initialize_urban_complex_generation(int screen_width, int screen_height);
+
+/**
+ * URBAN LIGHTING INFRASTRUCTURE INITIALIZATION (Chunk 1 Lighting Framework)
+ * Establishes dynamic illumination management system for future chunks
+ */
+void establish_urban_lighting_infrastructure();
+
+/**
+ * AIRCRAFT WARNING BEACON RENDERING (Chunk 2 Implementation)
+ * Renders FAA-compliant red flashing beacons on tall buildings for aviation safety
+ */
+void render_aircraft_warning_beacons(int screen_width __attribute__((unused)), int screen_height __attribute__((unused)));
+
+/**
+ * COMMUNICATION TOWER SYSTEMS (Chunk 3 Implementation)
+ * Renders cellular transmission infrastructure with rotating strobe beacons
+ */
+void render_communication_tower_systems(int screen_width __attribute__((unused)), int screen_height __attribute__((unused)));
+
+/**
+ * WATER TOWER FACILITY INSTALLATIONS (Chunk 4 Implementation)
+ * Renders elevated water reservoir towers with pulsing caution lighting
+ */
+void render_water_tower_facility_installations(int screen_width __attribute__((unused)), int screen_height __attribute__((unused))) {
+    static float global_caution_timer = 0.0f; // Smooth accumulated timing for caution lighting
+    global_caution_timer += 0.016f; // ~60 FPS increment for consistent timing
+
+    for (int building_index = 0; building_index < MAX_URBAN_BUILDINGS; building_index++) {
+        UrbanBuilding* structure = &urban_complex[building_index];
+
+        // WATER TOWER PRESENCE VERIFICATION
+        if (!(structure->roof_feature_mask & (1 << ROOF_RESERVOIR_TOWER))) {
+            continue; // No water tower on this building
+        }
+
+        // WATER TOWER POSITIONING - Elevated structure above building roof level
+        float tower_base_x = structure->x + structure->width / 2.0f; // Center of building
+        float tower_base_y = structure->roof_level_elevation + 3.0f; // Above roof level
+
+        // WATER TOWER GEOMETRY - Aged metallic cylindrical silhouette with dome
+        float cylinder_bottom_y = tower_base_y;
+        float cylinder_top_y = tower_base_y + WATER_TOWER_CYLINDER_HEIGHT;
+        float dome_top_y = cylinder_top_y + WATER_TOWER_DOME_HEIGHT;
+
+        // STRUCTURAL SUPPORT LEGS - Four independent steel support pillars
+        glColor4f(0.2f, 0.2f, 0.2f, 0.9f); // Dark metallic support color
+        glLineWidth(3.0f);
+
+        glBegin(GL_LINES);
+        // Four corner support pillars
+        float leg_offset = WATER_TOWER_CYLINDER_RADIUS;
+        glVertex2f(tower_base_x - leg_offset, tower_base_y);
+        glVertex2f(tower_base_x - leg_offset, cylinder_bottom_y);
+
+        glVertex2f(tower_base_x + leg_offset, tower_base_y);
+        glVertex2f(tower_base_x + leg_offset, cylinder_bottom_y);
+
+        glVertex2f(tower_base_x - leg_offset/2.0f, cylinder_top_y);
+        glVertex2f(tower_base_x - leg_offset/2.0f, dome_top_y);
+
+        glVertex2f(tower_base_x + leg_offset/2.0f, cylinder_top_y);
+        glVertex2f(tower_base_x + leg_offset/2.0f, dome_top_y);
+        glEnd();
+
+        // CYLINDRICAL RESERVOIR BODY - Aged metallic water container
+        glColor4f(0.4f, 0.4f, 0.45f, 0.95f); // Aged metal blue-gray
+        glLineWidth(1.0f);
+
+        // Cylinder outline using quad strips for filled appearance
+        glBegin(GL_QUADS);
+        // Front face
+        glVertex2f(tower_base_x - WATER_TOWER_CYLINDER_RADIUS, cylinder_bottom_y);
+        glVertex2f(tower_base_x + WATER_TOWER_CYLINDER_RADIUS, cylinder_bottom_y);
+        glVertex2f(tower_base_x + WATER_TOWER_CYLINDER_RADIUS, cylinder_top_y);
+        glVertex2f(tower_base_x - WATER_TOWER_CYLINDER_RADIUS, cylinder_top_y);
+
+        // Back face (same as front for 2D appearance)
+        glVertex2f(tower_base_x - WATER_TOWER_CYLINDER_RADIUS, cylinder_bottom_y);
+        glVertex2f(tower_base_x + WATER_TOWER_CYLINDER_RADIUS, cylinder_bottom_y);
+        glVertex2f(tower_base_x + WATER_TOWER_CYLINDER_RADIUS, cylinder_top_y);
+        glVertex2f(tower_base_x - WATER_TOWER_CYLINDER_RADIUS, cylinder_top_y);
+        glEnd();
+
+        // DOME CAP - Spherical dome silhouette above cylinder
+        glColor4f(0.5f, 0.5f, 0.55f, 0.9f); // Lighter dome color
+        glBegin(GL_QUADS);
+        // Dome approximated with rectangular sections
+        glVertex2f(tower_base_x - WATER_TOWER_CYLINDER_RADIUS * 0.7f, cylinder_top_y);
+        glVertex2f(tower_base_x + WATER_TOWER_CYLINDER_RADIUS * 0.7f, cylinder_top_y);
+        glVertex2f(tower_base_x + WATER_TOWER_CYLINDER_RADIUS * 0.5f, dome_top_y);
+        glVertex2f(tower_base_x - WATER_TOWER_CYLINDER_RADIUS * 0.5f, dome_top_y);
+        glEnd();
+
+        // MAINTENANCE CATWALK - Platform around cylinder for access
+        glColor4f(0.25f, 0.25f, 0.25f, 0.8f); // Dark platform color
+        glBegin(GL_QUADS);
+        // Catwalk platform rectangle
+        float catwalk_width = WATER_TOWER_CYLINDER_RADIUS * 2.5f;
+        float catwalk_height = 2.0f;
+        float catwalk_y = cylinder_bottom_y + WATER_TOWER_CYLINDER_HEIGHT * 0.6f;
+
+        glVertex2f(tower_base_x - catwalk_width/2.0f, catwalk_y);
+        glVertex2f(tower_base_x + catwalk_width/2.0f, catwalk_y);
+        glVertex2f(tower_base_x + catwalk_width/2.0f, catwalk_y + catwalk_height);
+        glVertex2f(tower_base_x - catwalk_width/2.0f, catwalk_y + catwalk_height);
+        glEnd();
+
+        // HANDRAIL DETAILS - Safety railings on catwalk
+        glColor4f(0.15f, 0.15f, 0.15f, 0.7f); // Darker handrail color
+        glLineWidth(2.0f);
+        glBegin(GL_LINES);
+        glVertex2f(tower_base_x - catwalk_width/2.0f, catwalk_y + catwalk_height);
+        glVertex2f(tower_base_x + catwalk_width/2.0f, catwalk_y + catwalk_height);
+        glEnd();
+
+        // SEVER DUTY CAUTION LIGHTING - Red/yellow pulsing warning beacons
+        float caution_light_y = cylinder_top_y + WATER_TOWER_DOME_HEIGHT + 5.0f;
+
+        // TIME-BASED CAUTION PULSE - 0.75 Hz frequency (1.33 second cycle)
+        float pulse_phase = fmodf(global_caution_timer * CAUTION_LIGHT_PULSE_FREQ, 1.0f);
+
+        // COLOR-CYCLING WARNING SYSTEM - Red to yellow pulsing pattern
+        float caution_intensity = 0.8f + 0.2f * sinf(pulse_phase * 2.0f * PI); // Pulsing intensity
+
+        if (pulse_phase < 0.5f) {
+            // First half cycle - red warning color
+            glColor4f(1.0f, 0.0f, 0.0f, caution_intensity); // Bright red
+        } else {
+            // Second half cycle - yellow caution color
+            glColor4f(1.0f, 1.0f, 0.0f, caution_intensity); // Bright yellow
+        }
+
+        // CAUTION BEACON RENDERING - Large diameter warning light
+        glPointSize(6.0f);
+        glBegin(GL_POINTS);
+        glVertex2f(tower_base_x, caution_light_y);
+        glEnd();
+
+        // AURA GLOW EFFECT - Enhanced visibility for safety warnings
+        glPointSize(10.0f);
+        glColor4f(1.0f, 0.5f, 0.0f, caution_intensity * 0.4f); // Orange-red glow
+
+        glBegin(GL_POINTS);
+        glVertex2f(tower_base_x, caution_light_y);
+        glEnd();
+    }
+
+    // RESET RENDER STATE - Restore defaults for subsequent rendering
+    glLineWidth(1.0f); // Reset line width
+    glPointSize(1.0f); // Reset point size
+}
 
 // Main function
 int main(int argc, char *argv[]) {
@@ -120,6 +388,11 @@ int main(int argc, char *argv[]) {
     SDL_GetDesktopDisplayMode(0, &dm);
     int screen_width = dm.w;
     int screen_height = dm.h;
+
+    // CHUNK 1: ESTABLISH URBAN SYSTEM FOUNDATION
+    // Initialize sophisticated urban building data architecture
+    initialize_urban_complex_generation(screen_width, screen_height);
+    establish_urban_lighting_infrastructure();
 
     // PRE-CALCULATE ALL BUILDING PROPERTIES - ONLY ONCE AT STARTUP
     // NOW WITH VARIABLE WIDTHS (UP TO 50% WIDER)
@@ -365,22 +638,22 @@ int main(int argc, char *argv[]) {
         // No stencil operations needed for gap stars - they render in open spaces
 
         // MAKE BUILDINGS VISIBLE - render them on top of stars
-        // NOW BACK TO YELLOW BUILDINGS AS REQUESTED
-        glColor3f(1.0f, 0.756f, 0.027f); // Mustard yellow buildings (RGB: 255, 193, 7)
-        for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-            Building *building = &buildings[build_idx];
-            float build_x_start = building->x;
-            float build_y_start = building->y;
-            float build_width = building->width;
-            float build_height = building->height;
-
-            glBegin(GL_QUADS);
-            glVertex2f(build_x_start, build_y_start);
-            glVertex2f(build_x_start + build_width, build_y_start);
-            glVertex2f(build_x_start + build_width, build_y_start + build_height);
-            glVertex2f(build_x_start, build_y_start + build_height);
-            glEnd();
-        }
+        // CHUNK 1: FOUNDATION MELTDOWN - Removing yellow rectangle rendering
+        // glColor3f(1.0f, 0.756f, 0.027f); // Mustard yellow buildings (RGB: 255, 193, 7)
+        // for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
+        //     Building *building = &buildings[build_idx];
+        //     float build_x_start = building->x;
+        //     float build_y_start = building->y;
+        //     float build_width = building->width;
+        //     float build_height = building->height;
+        //
+        //     glBegin(GL_QUADS);
+        //     glVertex2f(build_x_start, build_y_start);
+        //     glVertex2f(build_x_start + build_width, build_y_start);
+        //     glVertex2f(build_x_start + build_width, build_y_start + build_height);
+        //     glVertex2f(build_x_start, build_y_start + build_height);
+        //     glEnd();
+        // }
 
         // Render meteors
         for (int i = 0; i < METEOR_COUNT; i++) {
@@ -388,6 +661,18 @@ int main(int argc, char *argv[]) {
                 render_meteor(&meteors[i], screen_width, screen_height);
             }
         }
+
+        // CHUNK 2: AIRCRAFT WARNING BEACON SYSTEM - Aviation Safety Lighting
+        // Render FAA-compliant red beacons on tall buildings for aircraft safety
+        render_aircraft_warning_beacons(screen_width, screen_height);
+
+        // CHUNK 3: COMMUNICATION TOWER SYSTEMS - Cellular Transmission Infrastructure
+        // Render steel lattice towers with rotating strobe beacons and antenna arrays
+        render_communication_tower_systems(screen_width, screen_height);
+
+        // CHUNK 4: WATER TOWER FACILITY INSTALLATIONS - Hydraulic Infrastructure
+        // Render elevated water reservoir towers with pulsing caution lighting
+        render_water_tower_facility_installations(screen_width, screen_height);
 
         // NO WINDOW RENDERING AT ALL - removed entire window rendering system
 
@@ -529,20 +814,6 @@ void render_stars(Star *stars, int count, int screen_width __attribute__((unused
     glEnd();
 }
 
-void render_gradient_background(int screen_width, int screen_height) {
-    // Completely disable any fading - pure solid black background
-    glDisable(GL_SCISSOR_TEST);
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-
-    glBegin(GL_QUADS);
-    glColor3f(0.0f, 0.0f, 0.0f); // Pure black
-    glVertex2f(0.0f, 0.0f);
-    glVertex2f(screen_width, 0.0f);
-    glVertex2f(screen_width, screen_height);
-    glVertex2f(0.0f, screen_height);
-    glEnd();
-}
-
 void init_meteor(Meteor *meteor, int screen_width __attribute__((unused)), int screen_height) {
     meteor->x = -50; // Start off-screen left
     meteor->y = screen_height * 0.6f + (rand() % (screen_height / 3)); // Upper third
@@ -608,4 +879,367 @@ void render_meteor(Meteor *meteor, int screen_width __attribute__((unused)), int
     glColor4f(1.0f, 1.0f, 1.0f, meteor->life);
     glVertex2f(meteor->x, meteor->y);
     glEnd();
+}
+
+/**
+ * URBAN BUILDING INITIALIZATION FUNCTION (Chunk 1 Core Implementation)
+ * Generates sophisticated architectural configurations with building archetypes
+ */
+void initialize_urban_complex_generation(int screen_width, int screen_height __attribute__((unused))) {
+    for (int build_index = 0; build_index < MAX_URBAN_BUILDINGS; build_index++) {
+        UrbanBuilding* urban_structure = &urban_complex[build_index];
+
+        // SPATIAL POSITIONING - Advanced Urban Layout Algorithm
+        float urban_parcel_spacing = (float)screen_width / MAX_URBAN_BUILDINGS;
+        float architectural_offset_variance = (float)(rand() % (int)(urban_parcel_spacing * 0.6f) - urban_parcel_spacing * 0.3f);
+
+        // Coordinate system establishment with architectural precision
+        urban_structure->x = (float)build_index * urban_parcel_spacing + architectural_offset_variance + 15;
+        urban_structure->y = 50.0f; // Ground floor datum consistency
+
+        // ARCHITECTURAL PROFILE DETERMINATION - 11 Building Archetype System
+        int architectural_classification = rand() % 11; // Sophisticated typology selection
+        urban_structure->building_type = architectural_classification;
+
+        // BUILDING SPECIFICATION ENGINE - Feature-Driven Architectural Synthesis
+        switch (architectural_classification) {
+            case 0: // RESIDENTIAL APARTMENT COMPLEX (2-10 Stories, Balconies/Balconies Design)
+                urban_structure->floor_quantity = 2 + (rand() % 9);
+                urban_structure->height = urban_structure->floor_quantity * 20.0f;
+                urban_structure->width = 16.0f + (float)(rand() % 16);
+                urban_structure->illumination_percentage = 0.7f;
+                urban_structure->illumination_pattern_type = 0; // Residential nighttime energy profile
+                break;
+
+            case 1: // OFFICE FINANCIAL CENTER (15-35 Stories, Glass Curtain Architecture)
+                urban_structure->floor_quantity = 15 + (rand() % 21);
+                urban_structure->height = urban_structure->floor_quantity * 18.0f;
+                urban_structure->width = 20.0f + (float)(rand() % 25);
+                urban_structure->illumination_percentage = 0.9f;
+                urban_structure->illumination_pattern_type = 1; // Business hour diurnal cycle
+                // Prepare for aircraft beacon installation (Chunk 2)
+                urban_structure->aircraft_warning_beacon_present = (urban_structure->floor_quantity >= 30);
+                break;
+
+            case 2: // MEGATOWER CONSTRUCTION (40-80 Stories, Supertall Architectural Monument)
+                urban_structure->floor_quantity = 40 + (rand() % 41);
+                urban_structure->height = urban_structure->floor_quantity * 16.5f;
+                urban_structure->width = 24.0f + (float)(rand() % 24);
+                urban_structure->illumination_percentage = 1.0f;
+                urban_structure->illumination_pattern_type = 2; // 24/7 operational criticality
+                urban_structure->aircraft_warning_beacon_present = 1; // Mandatory aviation safety
+                urban_structure->antenna_element_array = 1 + (rand() % 3); // Communication infrastructure
+                break;
+
+            case 3: // HOSPITAL MEDICAL FACILITY (8-20 Stories, Emergency Illumination)
+                urban_structure->floor_quantity = 8 + (rand() % 13);
+                urban_structure->height = urban_structure->floor_quantity * 22.0f;
+                urban_structure->width = 18.0f + (float)(rand() % 20);
+                urban_structure->illumination_percentage = 1.0f;
+                urban_structure->illumination_pattern_type = 3; // 24-hour medical operation
+                urban_structure->aircraft_warning_beacon_present = (urban_structure->floor_quantity >= 15);
+                break;
+
+            case 4: // EDUCATIONAL ACADEMIC INSTITUTE (6-15 Stories, Classroom Configuration)
+                urban_structure->floor_quantity = 6 + (rand() % 10);
+                urban_structure->height = urban_structure->floor_quantity * 19.0f;
+                urban_structure->width = 22.0f + (float)(rand() % 18);
+                urban_structure->illumination_percentage = 0.6f;
+                urban_structure->illumination_pattern_type = 4; // Academic scheduling cycle
+                urban_structure->architectural_significance = 1.2f; // Cultural weighting factor
+                break;
+
+            case 5: // COMMERCIAL BUSINESS DISTRICT (10-25 Stories, Neon Advertising)
+                urban_structure->floor_quantity = 10 + (rand() % 16);
+                urban_structure->height = urban_structure->floor_quantity * 17.5f;
+                urban_structure->width = 19.0f + (float)(rand() % 21);
+                urban_structure->illumination_percentage = 0.85f;
+                urban_structure->illumination_pattern_type = 5; // Late-night commercial economy
+                break;
+
+            case 6: // INDUSTRIAL MANUFACTURING COMPLEX (3-8 Stories, Ventilation Systems)
+                urban_structure->floor_quantity = 3 + (rand() % 6);
+                urban_structure->height = urban_structure->floor_quantity * 25.0f;
+                urban_structure->width = 14.0f + (float)(rand() % 18);
+                urban_structure->illumination_percentage = 0.8f;
+                urban_structure->illumination_pattern_type = 6; // First/third shift operational cycles
+                urban_structure->roof_feature_mask |= (1 << ROOF_VENTILATIONS); // Industrial specific
+                break;
+
+            case 7: // CULTURAL INSTITUTION VENUE (12-25 Stories, Performance Hall Architecture)
+                urban_structure->floor_quantity = 12 + (rand() % 14);
+                urban_structure->height = urban_structure->floor_quantity * 20.0f;
+                urban_structure->width = 21.0f + (float)(rand() % 19);
+                urban_structure->illumination_percentage = 0.4f;
+                urban_structure->illumination_pattern_type = 7; // Event-based illumination patterns
+                urban_structure->architectural_significance = 1.5f; // Artistic importance multiplier
+                break;
+
+            case 8: // RESEARCH LABORATORY COMPLEX (8-18 Stories, Specialized Ventilation)
+                urban_structure->floor_quantity = 8 + (rand() % 11);
+                urban_structure->height = urban_structure->floor_quantity * 21.0f;
+                urban_structure->width = 20.0f + (float)(rand() % 20);
+                urban_structure->illumination_percentage = 1.0f;
+                urban_structure->illumination_pattern_type = 8; // Continuous operational criticality
+                break;
+
+            case 9: // RETAIL SHOPPING COMPLEX (2-6 Stories, Aluminum Framing)
+                urban_structure->floor_quantity = 2 + (rand() % 5);
+                urban_structure->height = urban_structure->floor_quantity * 28.0f;
+                urban_structure->width = 16.0f + (float)(rand() % 24);
+                urban_structure->illumination_percentage = 0.75f;
+                urban_structure->illumination_pattern_type = 9; // Retail business hour cycle
+                break;
+
+            case 10: // CONVENTION EVENT FACILITY (4-12 Stories, Exhibition Architecture)
+                urban_structure->floor_quantity = 4 + (rand() % 9);
+                urban_structure->height = urban_structure->floor_quantity * 23.0f;
+                urban_structure->width = 25.0f + (float)(rand() % 20);
+                urban_structure->illumination_percentage = 0.3f;
+                urban_structure->illumination_pattern_type = 10; // Convention schedule coordination
+                urban_structure->architectural_significance = 1.3f; // Convention center importance
+                break;
+        }
+
+        // ADVANCED URBAN FEATURE ALLOCATION - Roof Infrastructure Synthesis
+        int feature_probability_roll = rand() % 100;
+
+        // Probability-driven roof feature assignment
+        if (feature_probability_roll < 25) {
+            // Commercial/residential water tower (25% probability)
+            urban_structure->water_storage_capacity = 500000 + (rand() % 1500000); // 500K-2M gallon capacity
+            urban_structure->roof_feature_mask |= (1 << ROOF_RESERVOIR_TOWER);
+        } else if (feature_probability_roll < 40) {
+            // Broadcasting antenna array (15% probability)
+            urban_structure->antenna_element_array = 1 + (rand() % 5);
+            urban_structure->roof_feature_mask |= (1 << ROOF_TRANSMISSION_TOWER);
+
+            // Tower dimensions - fixed for consistent rendering (not recalculated per frame)
+            urban_structure->tower_height_pixels = 35 + (rand() % 25); // 35-60 pixel range
+            urban_structure->antenna_system_layout = rand() % 3; // 0,1,2 layout configurations
+        } else if (feature_probability_roll < 50) {
+            // Helicopter landing platform (10% probability, hospitals/offices)
+            urban_structure->roof_feature_mask |= (1 << ROOF_AERIAL_PLATFORM);
+        }
+
+        // Specialist building features for high-rise structures
+        if (urban_structure->floor_quantity >= 40) {
+            urban_structure->roof_feature_mask |= (1 << ROOF_MAINTENANCE_CRANE);
+        }
+
+        // Boundary calculation and spatial validation
+        urban_structure->right_edge = urban_structure->x + urban_structure->width;
+        urban_structure->window_count_horizontal = 2 + (rand() % 6); // Windows per floor variation
+
+        // Roof level elevation calculation for future three-dimensional features
+        urban_structure->roof_level_elevation = urban_structure->y + urban_structure->height;
+
+        // Advanced lighting preparation (coordination system for Chunks 2-10)
+        urban_structure->pulse_synchronization_timer = (float)rand() / RAND_MAX * 2.0f * PI; // Randomized phase
+    }
+}
+
+/**
+ * URBAN LIGHTING INFRASTRUCTURE INITIALIZATION (Chunk 1 Lighting Framework)
+ * Establishes dynamic illumination management system for future chunks
+ */
+void establish_urban_lighting_infrastructure() {
+    // RESET ILLUMINATION ARRAY - Clean slate for sophisticated lighting (Chunks 2-10)
+    for (int illumination_index = 0; illumination_index < LIGHTING_SYSTEM_LIMIT; illumination_index++) {
+        DynamicLightingElement* light_unit = &illumination_array[illumination_index];
+
+        // Initialize with zero values for system integrity
+        light_unit->positional_coordinates_x = light_unit->positional_coordinates_y = 0.0f;
+        light_unit->illumination_intensity = 0.0f;
+        light_unit->temporal_animation_cycle = 0.0f;
+        light_unit->structural_attachment_index = -1;
+        light_unit->illumination_classification = 0;
+        light_unit->operational_status_flag = 0;
+    }
+
+    // ARCHITECTURAL CATALOG POPULATION - Define available roof feature components
+    architectural_catalog[0].architectural_description = "Water Reservoir Tower";
+    architectural_catalog[1].architectural_description = "Transmission Antenna Array";
+    architectural_catalog[2].architectural_description = "Helicopter Landing Platform";
+    architectural_catalog[3].architectural_description = "Maintenance Construction Crane";
+    architectural_catalog[4].architectural_description = "Industrial Ventilation Systems";
+
+    // Initialize other architectural catalog properties as needed
+    for (int i = 0; i < ROOF_FEATURE_ARRAYS; i++) {
+        architectural_catalog[i].vertical_dimension_requirements = 0;
+        architectural_catalog[i].illumination_theme_color_primary = 0;
+        architectural_catalog[i].illumination_theme_color_secondary = 0;
+        architectural_catalog[i].collision_detection_volume = 0;
+        architectural_catalog[i].operational_power_consumption = 0;
+        architectural_catalog[i].maintenance_service_interval = 0;
+    }
+}
+
+/**
+ * AIRCRAFT WARNING BEACON RENDERING (Chunk 2 Implementation)
+ * Renders FAA-compliant red flashing beacons on tall buildings for aviation safety
+ */
+void render_aircraft_warning_beacons(int screen_width __attribute__((unused)), int screen_height __attribute__((unused))) {
+    // static float global_beacon_timer = 0.0f; // Reserved for future timing coordination
+
+    for (int building_index = 0; building_index < MAX_URBAN_BUILDINGS; building_index++) {
+        UrbanBuilding* structure = &urban_complex[building_index];
+
+        // HEIGHT-BASED COMPLIANCE TRIGGERING - FAA Aviation Safety Specifications
+        if (!structure->aircraft_warning_beacon_present) {
+            continue; // Building doesn't qualify for aviation lighting
+        }
+
+        // BEACON POSITIONING CALCULATION - Rooftop placement with regulatory compliance
+        float beacon_x = structure->x + structure->width / 2.0f; // Center of building
+        float beacon_y_offset = 5.0f; // Small elevation above roof for visibility
+        float beacon_y = structure->roof_level_elevation + beacon_y_offset;
+
+        // REGULATORY BEACON QUANTITY DETERMINATION
+        int beacon_count = (structure->floor_quantity >= 50) ? 2 : 1; // Dual for megastructures
+
+        for (int beacon_instance = 0; beacon_instance < beacon_count; beacon_instance++) {
+            // DUAL BEACON POSITIONING - Offset for second beacon on megastructures
+            float x_offset = (beacon_count == 2 && beacon_instance == 1) ? structure->width * 0.25f : 0.0f;
+            float current_beacon_x = beacon_x + x_offset;
+            float current_beacon_y = beacon_y;
+
+            // BEACON ANIMATED ILLUMINATION CYCLE - 1.5s period with 1.0s active time
+            structure->pulse_synchronization_timer += 0.016f; // ~60 FPS increment
+            float cycle_position = fmodf(structure->pulse_synchronization_timer, AIRCRAFT_BEACON_BLINK_PERIOD);
+            int beacon_lit = (cycle_position < AIRCRAFT_BEACON_ACTIVE_TIME);
+
+            if (beacon_lit) {
+                // FAA-CERTIFIED RED AVIATION COLOR - RGB(1.0, 0.0, 0.0)
+                glColor4f(1.0f, 0.0f, 0.0f, 1.0f); // Pure red, fully opaque
+
+                // EMERGENCY ILLUMINATION RENDERING - Point geometry with safety visibility
+                glPointSize(AIRCRAFT_BEACON_DIAMETER);
+
+                glBegin(GL_POINTS);
+                glVertex2f(current_beacon_x, current_beacon_y);
+                glEnd();
+
+                // AURA GLOW EFFECT - Enhanced visibility for aviation safety
+                glPointSize(AIRCRAFT_BEACON_DIAMETER * 1.5f);
+                glColor4f(1.0f, 0.0f, 0.0f, 0.4f); // Semi-transparent red glow
+
+                glBegin(GL_POINTS);
+                glVertex2f(current_beacon_x, current_beacon_y);
+                glEnd();
+            }
+        }
+
+        // REGULATORY FLASH SYNCHRONIZATION - Prevent simultaneous activation hazards
+        // Different phase offsets ensure aviation safety spacing between adjacent structures
+    }
+
+    // RESET RENDER STATE - Restore point size for subsequent rendering layers
+    glPointSize(1.0f); // Reset to default for stars
+}
+
+/**
+ * COMMUNICATION TOWER SYSTEMS (Chunk 3 Implementation)
+ * Renders cellular transmission infrastructure with rotating strobe beacons
+ */
+void render_communication_tower_systems(int screen_width __attribute__((unused)), int screen_height __attribute__((unused))) {
+    static float global_rotation_timer = 0.0f; // Smooth accumulated timing for beacon rotation
+    global_rotation_timer += 0.016f; // ~60 FPS increment for consistent timing
+
+    for (int building_index = 0; building_index < MAX_URBAN_BUILDINGS; building_index++) {
+        UrbanBuilding* structure = &urban_complex[building_index];
+
+        // TRANSMISSION INFRASTRUCTURE PRESENCE VERIFICATION
+        if (!(structure->roof_feature_mask & (1 << ROOF_TRANSMISSION_TOWER))) {
+            continue; // No communication tower on this building
+        }
+
+        // TOWER POSITIONING CALCULATION - Strategic placement adjacent to buildings
+        float tower_base_x = structure->x + structure->width + 3.0f; // Right side of building
+        float tower_base_y = structure->y + structure->height - 10.0f; // Near roof level
+
+        // TOWER DIMENSIONS - Use fixed values from structure initialization
+        float tower_height = (float)structure->tower_height_pixels; // Fixed 35-60 pixel range
+
+        // STRUCTURAL LATTICE RENDERING - Thin line geometry for steel appearance
+        glColor4f(0.3f, 0.3f, 0.3f, 0.8f); // Dark gray steel color
+        glLineWidth(2.0f);
+
+        glBegin(GL_LINES);
+        // Main vertical tower shaft
+        glVertex2f(tower_base_x, tower_base_y);
+        glVertex2f(tower_base_x, tower_base_y + tower_height);
+
+        // Lateral bracing elements
+        float bracing_levels = 4.0f;
+        for (int level = 1; level <= (int)bracing_levels; level++) {
+            float brace_y = tower_base_y + (tower_height / bracing_levels) * (float)level;
+            float brace_width = 8.0f - (float)level; // Decreasing width upward
+
+            // Cross bracing - lattice appearance
+            glVertex2f(tower_base_x - brace_width/2.0f, brace_y);
+            glVertex2f(tower_base_x + brace_width/2.0f, brace_y);
+        }
+        glEnd();
+
+        // ANTENNA ARRAY RENDITION - Multi-element microwave transceiver systems
+        float antenna_top_y = tower_base_y + tower_height;
+        int antenna_count = structure->antenna_element_array;
+
+        glColor4f(0.8f, 0.8f, 0.8f, 0.9f); // Light gray antenna color
+        glBegin(GL_LINES);
+        for (int antenna_idx = 0; antenna_idx < antenna_count; antenna_idx++) {
+            float antenna_x = tower_base_x + (float)(antenna_idx - antenna_count/2) * 4.0f;
+            glVertex2f(antenna_x, antenna_top_y);
+            glVertex2f(antenna_x, antenna_top_y + 8.0f);
+        }
+        glEnd();
+
+        // ROTARY STROBE BEACON SYSTEM - 360° sweeping white/high-vis patterns
+        float beacon_center_y = antenna_top_y + 10.0f;
+
+        // TIME-DEPENDENT ROTATION - Continuous 360° sweeping animation
+        float rotation_speed = 120.0f; // Degrees per second
+        float rotation_angle = fmodf(global_rotation_timer * rotation_speed, 360.0f);
+
+        // BEACON ILLUMINATION PATTERN - High-visibility white strobe
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // Pure white
+
+        // Rotating beacon beam representation
+        float beam_length = 25.0f;
+        float beam_angle_width = 15.0f; // 15-degree beam width
+
+        // Calculate beam endpoints
+        float beam_start_angle = rotation_angle - beam_angle_width/2.0f;
+        float beam_end_angle = rotation_angle + beam_angle_width/2.0f;
+
+        // Convert to radians for OpenGL
+        float start_rad = beam_start_angle * PI / 180.0f;
+        float end_rad = beam_end_angle * PI / 180.0f;
+
+        glBegin(GL_TRIANGLES);
+        // Sweeping beam - triangle from beacon center to endpoints
+        glVertex2f(tower_base_x, beacon_center_y);
+        glVertex2f(tower_base_x + cosf(start_rad) * beam_length, beacon_center_y + sinf(start_rad) * beam_length);
+        glVertex2f(tower_base_x + cosf(end_rad) * beam_length, beacon_center_y + sinf(end_rad) * beam_length);
+        glEnd();
+
+        // BEACON CENTER INDICATOR - Pulsing white light source
+        glPointSize(3.0f);
+        glBegin(GL_POINTS);
+        glVertex2f(tower_base_x, beacon_center_y);
+        glEnd();
+
+        // AURA GLOW EFFECT - Enhanced visibility for communication systems
+        glPointSize(5.0f);
+        glColor4f(1.0f, 1.0f, 1.0f, 0.6f); // Semi-transparent white glow
+
+        glBegin(GL_POINTS);
+        glVertex2f(tower_base_x, beacon_center_y);
+        glEnd();
+    }
+
+    // RESET RENDER STATE - Restore defaults for subsequent rendering
+    glLineWidth(1.0f); // Reset line width
+    glPointSize(1.0f); // Reset point size
 }
