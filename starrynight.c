@@ -24,15 +24,19 @@
 #include <stdbool.h>
 
 #define PI 3.14159265359f
-#define STAR_COUNT 600  // Focus more on city formation than density
+#define STAR_COUNT 500  // Space for drifting stars only
 #define METEOR_COUNT 10
 #define METEOR_PARTICLES 20
-#define CITY_LINE_HEIGHT 80  // Height of permanent city line
-#define CITY_BUILDINGS 25    // Clear building positions to fill
+#define CITY_BUILDINGS 6     // Number of solid buildings with windows
 
-// Global building positions array
-float building_positions[CITY_BUILDINGS * 3];  // x, y, filled (0=empty, 1=filled)
-float building_spacing; // Will be set in main
+// Predefined building templates (relative to building position)
+// Each building has a set of light positions that get filled over time
+typedef struct {
+    float x, y;     // Position relative to building base
+} BuildingPoint;
+
+BuildingPoint building_templates[6][50]; // 6 building types, max 50 points each
+int building_point_counts[6]; // How many points per building
 
 typedef struct {
     float x, y;           // Position in pixels
@@ -142,13 +146,67 @@ int main(int argc, char *argv[]) {
     // SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
     SDL_ShowCursor(0);  // Hide mouse cursor
 
-    // Initialize predefined building positions for permanent city line (global array)
+    // Initialize building templates with light positions
     building_spacing = (float)screen_width / CITY_BUILDINGS;
+
+    // Building 0: Tall rectangular building
+    building_point_counts[0] = 25;
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+            building_templates[0][i * 5 + j].x = (float)i * 15;
+            building_templates[0][i * 5 + j].y = (float)j * 20 + 20;
+        }
+    }
+
+    // Building 1: Triangular/wedge shape
+    building_point_counts[1] = 21;
+    int idx = 0;
+    for (int y = 5; y > 0; y--) {
+        for (int x = 0; x < y * 2; x++) {
+            building_templates[1][idx].x = (float)x * 8 - y * 8;
+            building_templates[1][idx].y = (float)(6 - y) * 25 + 20;
+            idx++;
+        }
+    }
+
+    // Building 2: Cross shape
+    building_point_counts[2] = 25;
+    idx = 0;
+    for (int i = 0; i < 5; i++) {
+        building_templates[2][idx++].x = 30; building_templates[2][idx-1].y = (float)i * 20 + 20; // Vertical bar
+        building_templates[2][idx++].x = (float)i * 15; building_templates[2][idx-1].y = 60; // Horizontal bar
+    }
+
+    // Building 3: Random scattered lights
+    building_point_counts[3] = 20;
+    for (int i = 0; i < 20; i++) {
+        building_templates[3][i].x = (float)(rand() % 80 - 40);
+        building_templates[3][i].y = (float)(rand() % 100 + 20);
+    }
+
+    // Building 4: Spiral pattern
+    building_point_counts[4] = 24;
+    for (int i = 0; i < 24; i++) {
+        float angle = (float)i / 24.0f * 2 * PI;
+        building_templates[4][i].x = cosf(angle) * (float)i * 1.5f;
+        building_templates[4][i].y = sinf(angle) * (float)i * 1.5f + 50;
+    }
+
+    // Building 5: Grid pattern
+    building_point_counts[5] = 16;
+    idx = 0;
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
+            building_templates[5][idx].x = (float)x * 20;
+            building_templates[5][idx].y = (float)y * 25 + 20;
+            idx++;
+        }
+    }
+
+    // Initialize building completion tracking
+    int completion_counts[CITY_BUILDINGS]; // How many lights filled per building
     for (int i = 0; i < CITY_BUILDINGS; i++) {
-        // Base positions for buildings
-        building_positions[i * 3] = i * building_spacing + building_spacing * 0.5f;  // x position
-        building_positions[i * 3 + 1] = screen_height - 40 - ((float)(rand() % 3) * 20);  // y position (different heights)
-        building_positions[i * 3 + 2] = 0;  // 0 = not filled yet
+        completion_counts[i] = 0;
     }
 
     // Initialize star system - adjust count based on density setting
@@ -214,6 +272,20 @@ int main(int argc, char *argv[]) {
                 update_meteor(&meteors[i], dt * speed_mult, screen_width, screen_height);
             }
         }
+
+        // Gradually fill buildings with lights over time
+        static float building_fill_timer = 0;
+        building_fill_timer += dt * speed_mult;
+
+        if (building_fill_timer >= 0.5f) { // Every 0.5 seconds
+            building_fill_timer -= 0.5f;
+
+            // Add a light to one random building (if not full)
+            int build_idx = rand() % CITY_BUILDINGS;
+            if (completion_counts[build_idx] < building_point_counts[build_idx]) {
+                completion_counts[build_idx]++; // Add one more light to this building
+            }
+        }
         // Render scene - DISABLE all clearing to eliminate ANY possible fade effects
         // glClear(GL_COLOR_BUFFER_BIT);
 
@@ -228,28 +300,56 @@ int main(int argc, char *argv[]) {
         glVertex2f(0.0f, screen_height);
         glEnd();
 
-        // Render buildings (solid black silhouettes) - made these darker/stronger to ensure visibility
-        glColor3f(0.0f, 0.0f, 0.0f); // Pure black buildings
+        // Render buildings with solid silhouettes and randomly lighting windows
+        for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
+            float build_x_start = (float)screen_width * build_idx / CITY_BUILDINGS + 30;
+            float build_width = ((float)screen_width / CITY_BUILDINGS) - 60;
+            float build_height = 150.0f + (float)(rand() % build_idx * 50); // Vary height by position
+            float build_y_start = 50.0f; // From bottom
 
-        glBegin(GL_QUADS);
-        // Create Dallas-skyline-style buildings: tall, narrow, irregular heights
-        int building_tops[] = {
-            180, 250, 200, 320, 280, 190, 340, 220, 300, 260,
-            350, 180, 290, 240, 310, 210, 270, 330, 230, 280
-        };
+            // Draw building silhouette (solid black)
+            glColor3f(0.0f, 0.0f, 0.0f); // Pure black buildings
+            glBegin(GL_QUADS);
+            glVertex2f(build_x_start, build_y_start);
+            glVertex2f(build_x_start + build_width, build_y_start);
+            glVertex2f(build_x_start + build_width, build_y_start + build_height);
+            glVertex2f(build_x_start, build_y_start + build_height);
+            glEnd();
 
-        for (int i = 0; i < 20; i++) {
-            int x = (screen_width / 20) * i + 15;
-            int width = (screen_width / 20) - 10;
-            int height = building_tops[i];
+            // Draw tiny windows (2x2 pixels each)
+            int windows_per_row = (int)build_width / 8; // Small windows
+            int window_rows = (int)build_height / 12;
+            int window_offset = rand() % CITY_BUILDINGS; // Vary pattern per building
 
-            // Building rectangle
-            glVertex2f(x, screen_height - 30);
-            glVertex2f(x + width, screen_height - 30);
-            glVertex2f(x + width, screen_height - height - 30);
-            glVertex2f(x, screen_height - height - 30);
+            for (int row = 0; row < window_rows; row++) {
+                for (int col = 0; col < windows_per_row; col++) {
+                    float window_x = build_x_start + col * 8 + 3;
+                    float window_y = build_y_start + row * 12 + 8;
+
+                    // Calculate which window in the overall sequence
+                    int window_idx = (build_idx * 20) + (row * windows_per_row + col);
+                    float light_phase = sinf(current_time * 0.001f + (float)window_idx * 0.2f + window_offset);
+
+                    // Windows gradually light up based on time and random factors
+                    bool is_lit = (light_phase > -0.5f + cosf(window_idx) * 0.3f) &&
+                                  (rand() % 100 < 5); // Small chance to light up randomly
+
+                    if (is_lit) {
+                        // Lit window (warm yellow)
+                        float brightness = 0.7f + sinf(current_time * 0.004f + window_idx) * 0.3f;
+                        glColor4f(1.0f, 0.9f, brightness * 0.6f, brightness);
+
+                        // Small window rectangle (2x4 pixels)
+                        glBegin(GL_QUADS);
+                        glVertex2f(window_x, window_y);
+                        glVertex2f(window_x + 3, window_y);
+                        glVertex2f(window_x + 3, window_y + 3);
+                        glVertex2f(window_x, window_y + 3);
+                        glEnd();
+                    }
+                }
+            }
         }
-        glEnd();
 
         // Render meteors (behind stars for depth)
         for (int i = 0; i < METEOR_COUNT; i++) {
