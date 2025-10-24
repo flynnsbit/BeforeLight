@@ -1323,9 +1323,9 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
     static float global_star_rotation = 0.0f; // Global rotation angle for gap stars
     time += dt;
 
-    // Apply SUPER SLOW rotation to gap stars for perfect celestial motion
+    // Apply ULTRA SLOW rotation to gap stars for perfect celestial motion
     // NOTE: Only applies slow rotation to gap stars via this function
-    global_star_rotation += dt * 0.0005f; // INSANELY slow rotation (about 0.5 degrees per second - halved!)
+    global_star_rotation += dt * 0.000125f; // ULTRA SLOW rotation (about 0.125 degrees per second - halved again!)
 
     for (int i = 0; i < count; i++) {
         Star *s = &stars[i];
