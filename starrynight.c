@@ -803,57 +803,45 @@ int main(int argc, char *argv[]) {
 // LEGACY STATIC BUILDING PRECALCULATION REMOVED
 // All buildings now dynamically generated in urban_complex with proper urban planning
 
-    // CALCULATE CONTINUOUS STAR FIELD ACROSS ENTIRE SCREEN WIDTH
-    // Stars will be positioned across full horizontal range with vertical density control
+    // CALCULATE CONTINUOUS STAR FIELD WITH SMOOTH DENSITY GRADIENT
+    // Reach target sky star density at the top, dense at bottom near buildings
     gap_stars = malloc(GAP_STAR_COUNT * sizeof(Star));
 
-    // Stars are now distributed across full screen width (no gaps - everything is "open area")
-    // Vertical distribution controls where stars appear relative to buildings
+    // Calculate target sky star density for gradient matching
+    int target_sky_density = (int)(STAR_COUNT * (0.3f + star_density * 0.7f));
 
-    // CREATE CONTINUOUS STAR FIELD WITH GRADUAL HEIGHT-BASED DENSITY ACROSS ENTIRE WIDTH
+    // Create smooth density gradient: dense at bottom → sparse at top (matching -d parameter)
     int star_idx = 0;
+    const int sampling_points = 1000; // Quality of distribution sampling
 
-    // Find the maximum building height to determine blend zones
-    // Use the dynamic urban_complex instead of static buildings array
-    float max_building_height = 0.0f;
-    for (int i = 0; i < MAX_URBAN_BUILDINGS; i++) {
-        if (urban_complex[i].height > max_building_height) {
-            max_building_height = urban_complex[i].height;
-        }
-    }
-
-    // Define density zones for continuous coverage
-    // Zone 1: Building area (dense - near ground level)
-    // Zone 2: Above building tops (gradually decreasing)
-    // Zone 3: Upper atmosphere (matching sky density)
-
-    float building_top_level = urban_complex[0].y + max_building_height; // Top of tallest building
-    float zone2_end = building_top_level + (max_building_height * 0.5f); // 50% above buildings
-    float zone3_start = screen_height / 4; // Where sky stars begin
-
-    // Create stars across entire screen width with height-based density
     for (int j = 0; j < GAP_STAR_COUNT; j++) {
         Star *star = &gap_stars[star_idx];
 
-        // Position across full screen width (not just gaps)
+        // X position: uniform across full width
         star->x = (float)rand() / RAND_MAX * screen_width;
 
-        // Position with gradual density decrease from building level to full height
-        // Map star to different vertical zones with varying density
-        float rand_val = (float)rand() / RAND_MAX;
+        // Y POSITION SCHEME: Inverse probability sampling for continuous density gradient
+        // Higher probability of selection at lower heights, matching sky density at top
+        float normalized_height;
+        int attempts = 0;
+        const int max_attempts = 100;
 
-        if (rand_val < 0.6f) {
-            // 60% of stars in dense building level zone (near ground, between buildings)
-            star->y = urban_complex[0].y + rand_val / 0.6f * max_building_height;
-        } else if (rand_val < 0.9f) {
-            // 30% of stars in medium density zone (above building tops)
-            float zone_progress = (rand_val - 0.6f) / 0.3f; // 0-1 in this zone
-            star->y = building_top_level + zone_progress * (zone2_end - building_top_level);
-        } else {
-            // 10% of stars in light upper zone (towards where sky stars begin)
-            float zone_progress = (rand_val - 0.9f) / 0.1f; // 0-1 in this zone
-            star->y = zone3_start + zone_progress * (screen_height - zone3_start);
-        }
+        do {
+            normalized_height = (float)rand() / RAND_MAX; // 0-1 height normalized
+            float target_density = target_sky_density + (GAP_STAR_COUNT/target_sky_density * 3) * (1.0f - normalized_height); // Dense bottom → sparse top
+
+            // Inverse sampling: stars more likely lower in sky
+            float acceptance_probability = target_density / (GAP_STAR_COUNT/target_sky_density * 3 * 1.0f);
+            float roll = (float)rand() / RAND_MAX;
+
+            if (roll < acceptance_probability) {
+                break; // Accept this star position
+            }
+            attempts++;
+        } while (attempts < max_attempts);
+
+        // Convert normalized height to actual screen coordinates
+        star->y = normalized_height * screen_height;
 
         // Define motion
         star->vx = (float)(rand() % 20 - 10) / 500.0f; // Very slow drift
@@ -865,8 +853,8 @@ int main(int argc, char *argv[]) {
         star->twinkle_phase = (float)(rand() % 628) / 100.0f;
         star->twinkle_speed = 0.6f + (float)(rand() % 80) / 100.0f; // Varied twinkling
         star->size = 0.8f + (float)(rand() % 15) / 10.0f; // Smaller 0.8-2.3 pixels
-        star->is_bright = (rand() % 100) < 15; // 15% bright gap stars (fewer than sky)
-        star->building_gap = -1; // No longer tracking specific gaps
+        star->is_bright = (rand() % 100) < 15; // 15% bright gap stars
+        star->building_gap = -1;
 
         star_idx++;
     }
