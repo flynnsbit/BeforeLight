@@ -1073,10 +1073,74 @@ int main(int argc, char *argv[]) {
         // STAR SYSTEM RENDERING - Conditional based on user selection
         if (celestial_sphere_mode) {
             // 🌌 DYNAMIC/CELESTIAL SPHERE MODE - Full astronomical simulation
-            // Render astronomical star sphere with Earth rotation
-            // [Future: Implement 3D celestial coordinates and sidereal rotation]
+            // Render astronomical star sphere with Earth rotation (sidereal ~23h56m)
+            static float celestial_rotation_angle = 0.0f; // Tracks Earth's rotation
+            celestial_rotation_angle += dt * 0.00009f; // Very slow rotation for sidereal day
+
             glPointSize(1.0f); // Ensure proper star point size
-            render_stars(stars, actual_star_count, screen_width, screen_height);
+            glBegin(GL_POINTS);
+            glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // Pure white celestial stars
+
+            // Render stars positioned on celestial sphere with rotation
+            for (int i = 0; i < actual_star_count; i++) {
+                // Generate spherical coordinates for each star (simplified celestial)
+                float ra = ((float)i / actual_star_count) * 2 * PI; // RA: 0-2π
+                float dec = ((rand() % 200) - 100) * PI / 180.0f; // Dec: -90° to +90°
+
+                // Apply Earth's rotation (sidereal day: 23h56m49s, ~4 minutes shorter than solar)
+                float adjusted_ra = ra + celestial_rotation_angle;
+
+                // Convert celestial coordinates to 3D unit sphere position
+                float x = cosf(dec) * cosf(adjusted_ra);  // Unit sphere X
+                float y = cosf(dec) * sinf(adjusted_ra);  // Unit sphere Y
+                float z = sinf(dec);                      // Unit sphere Z (altitude)
+
+                // Stereographic projection to 2D screen (looking from "below" the north pole)
+                if (z > -0.1f) { // Only show stars visible from northern hemisphere view
+                    float u, v;
+
+                    if (fabsf(z - 1.0f) < 0.001f) {
+                        // Handle north pole singularity
+                        u = 0.0f;
+                        v = 0.0f;
+                    } else {
+                        // Standard stereographic projection
+                        float scale = 2.0f / (1.0f - z);
+                        u = scale * y * 0.5f; // Scale and center horizontally
+                        v = scale * x * 0.5f; // Scale and center vertically
+                    }
+
+                    // Convert to screen coordinates (centered on screen)
+                    float screen_u = screen_width / 2.0f + u * (screen_width / 4.0f);  // Centered projection
+                    float screen_v = screen_height / 2.0f + v * (screen_height / 4.0f);
+
+                    // Only render if star is visible (above horizon/buildings)
+                    if (screen_u >= 0 && screen_u < screen_width &&
+                        screen_v >= 0 && screen_v < screen_height) {
+
+                        // Apply building horizon mask - don't show stars below structures
+                        int under_building = 0;
+                        for (int b = 0; b < MAX_URBAN_BUILDINGS; b++) {
+                            UrbanBuilding* building = &urban_complex[b];
+                            if (building->floor_quantity <= 0) continue;
+
+                            if (screen_u >= building->x && screen_u <= (building->x + building->width)) {
+                                // Star is above this building - don't render if below building top
+                                if (screen_v < (building->y + building->height)) {
+                                    under_building = 1;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!under_building) {
+                            glVertex2f(screen_u, screen_v);
+                        }
+                    }
+                }
+            }
+            glEnd();
+
         } else {
             // 📺 STATIC/LEGACY MODE - Original star field behavior
             glPointSize(1.0f); // Ensure proper star point size
