@@ -1076,7 +1076,7 @@ int main(int argc, char *argv[]) {
 
             glPointSize(1.0f); // Ensure proper star point size
             glBegin(GL_POINTS);
-            glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // Pure white celestial stars
+            glColor4f(0.85f, 0.85f, 0.8f, 0.8f); // DIMMED celestial stars to match gap star brightness
 
             // Render stars positioned on celestial sphere with FIXED positions and rotation
             for (int i = 0; i < actual_star_count; i++) {
