@@ -674,7 +674,7 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
         float window_height = floor_height * 0.5f; // Windows occupy 50% of floor height (smaller)
         float window_spacing_y = floor_height * 0.25f; // Vertical spacing between floors
 
-        // ILLUMINATED WINDOW RENDERING WITH BASIC FRAMES (Phase 1 Enhancement)
+        // ILLUMINATED WINDOW RENDERING WITH GRADIENT LIGHTING (Phase 3 Enhancement)
         glBegin(GL_QUADS);
         for (int floor = 0; floor < floors; floor++) {
             for (int window_x = 0; window_x < windows_per_floor; window_x++) {
@@ -688,6 +688,8 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
                 float window_bottom = building_y + WINDOW_GRID_SAFE_MARGIN + floor * floor_height + window_spacing_y;
                 float window_right = window_left + window_width * 0.8f; // 80% of allocated width
                 float window_top = window_bottom + window_height;
+                float window_center_x = (window_left + window_right) / 2.0f;
+                float window_center_y = (window_bottom + window_top) / 2.0f;
 
                 // RENDER DARK WINDOW BORDER FRAME FIRST
                 glColor4f(0.1f, 0.1f, 0.1f, 0.9f); // Dark gray frame
@@ -697,25 +699,44 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
                 glVertex2f(window_right + FRAME_WIDTH, window_top + FRAME_WIDTH);
                 glVertex2f(window_left - FRAME_WIDTH, window_top + FRAME_WIDTH);
 
-                // RENDER ILLUMINATED WINDOW INTERIOR
-                glColor4f(0.7f, 0.5f, 0.25f, 0.95f); // Darker rich gold interior lighting
+                // PHASE 3: MULTI-LAYER WINDOW GRADIENT LIGHTING for 3D depth
+                // Bright center, darkening toward edges for realistic interior depth
+
+                // LAYER 1: BRIGHT CENTER (Core high-intensity area)
+                glColor4f(0.85f, 0.65f, 0.4f, 0.98f); // Bright gold center
+                float center_size_x = (window_right - window_left) * 0.6f; // 60% width
+                float center_size_y = (window_top - window_bottom) * 0.65f; // 65% height
+                glVertex2f(window_center_x - center_size_x/2.0f, window_center_y - center_size_y/2.0f);
+                glVertex2f(window_center_x + center_size_x/2.0f, window_center_y - center_size_y/2.0f);
+                glVertex2f(window_center_x + center_size_x/2.0f, window_center_y + center_size_y/2.0f);
+                glVertex2f(window_center_x - center_size_x/2.0f, window_center_y + center_size_y/2.0f);
+
+                // LAYER 2: MEDIUM BRIGHTNESS MIDDLE LAYER
+                glColor4f(0.75f, 0.55f, 0.3f, 0.9f); // Medium gold
+                float middle_size_x = (window_right - window_left) * 0.85f; // 85% width
+                float middle_size_y = (window_top - window_bottom) * 0.85f; // 85% height
+                glVertex2f(window_center_x - middle_size_x/2.0f, window_center_y - middle_size_y/2.0f);
+                glVertex2f(window_center_x + middle_size_x/2.0f, window_center_y - middle_size_y/2.0f);
+                glVertex2f(window_center_x + middle_size_x/2.0f, window_center_y + middle_size_y/2.0f);
+                glVertex2f(window_center_x - middle_size_x/2.0f, window_center_y + middle_size_y/2.0f);
+
+                // LAYER 3: DIM OUTER EDGE (Full coverage with lowest brightness)
+                glColor4f(0.65f, 0.45f, 0.2f, 0.8f); // Dim gold edges
                 glVertex2f(window_left, window_bottom);
                 glVertex2f(window_right, window_bottom);
                 glVertex2f(window_right, window_top);
                 glVertex2f(window_left, window_top);
 
-                // GLASS REFLECTION HIGHLIGHTS - Phase 2 Surface Detailing
-                // Bright white highlights on upper portions simulating light reflection
+                // GLASS REFLECTION HIGHLIGHTS - Enhanced for Phase 3 depth
                 glEnd(); // End current quads
-                glColor4f(1.0f, 1.0f, 0.95f, 0.8f); // Bright white highlight
-                glPointSize(2.0f); // More visible than stars
+                glColor4f(1.0f, 1.0f, 0.95f, 0.85f); // Brighter highlights
+                glPointSize(2.5f); // Even more visible
                 glBegin(GL_POINTS);
-                // Top-left corner highlight (typical sun reflection)
-                glVertex2f(window_left + 2.0f, window_top - 2.0f);
-                // Upper-middle highlight for depth
-                glVertex2f(window_left + (window_right - window_left) * 0.7f, window_top - 3.0f);
-                // Add more highlights for better glass effect
-                glVertex2f(window_left + (window_right - window_left) * 0.3f, window_top - 4.0f);
+                // Enhanced reflection pattern for glass depth
+                glVertex2f(window_left + 3.0f, window_top - 3.0f);  // Close top-left
+                glVertex2f(window_left + (window_right - window_left) * 0.65f, window_top - 4.0f); // Mid-upper
+                glVertex2f(window_left + (window_right - window_left) * 0.35f, window_top - 2.0f); // Left-upper
+                glVertex2f(window_left + 2.0f, window_bottom + (window_top - window_bottom) * 0.7f); // Left-mid
                 glEnd();
                 glPointSize(1.0f); // Reset point size for stars
                 glBegin(GL_QUADS); // Resume quads for next window
@@ -1311,9 +1332,19 @@ void render_meteor(Meteor *meteor, int screen_width __attribute__((unused)), int
     }
     glEnd();
 
-    // Render bright head of meteor
+    // Render EXTRA-BRIGHT head of meteor with enhanced glow
+    glPointSize(4.0f); // Larger head for extra brightness
+
+    // Main bright center core
     glBegin(GL_POINTS);
-    glColor4f(1.0f, 1.0f, 1.0f, meteor->life);
+    glColor4f(1.0f, 1.0f, 1.0f, meteor->life * 1.2f); // Slightly brighter than max
+    glVertex2f(meteor->x, meteor->y);
+    glEnd();
+
+    // GLOWING AURA - Extra brightness halo
+    glPointSize(8.0f); // Wide glow halo
+    glBegin(GL_POINTS);
+    glColor4f(1.0f, 1.0f, 1.0f, meteor->life * 0.6f); // Dimmer halo for glow effect
     glVertex2f(meteor->x, meteor->y);
     glEnd();
 }
