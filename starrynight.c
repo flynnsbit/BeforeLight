@@ -1150,7 +1150,10 @@ int main(int argc, char *argv[]) {
         }
 
         // RENDER GAP STARS BETWEEN BUILDINGS - Continuous density gradient (no stencil needed)
-        render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);
+        // NOTE: DISABLED in celestial sphere mode to isolate spinning issue
+        if (!celestial_sphere_mode) {
+            render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);
+        }
 
         // No stencil operations needed for gap stars - they render in open spaces
 
