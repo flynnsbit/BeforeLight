@@ -1634,8 +1634,8 @@ void render_communication_tower_systems(int screen_width __attribute__((unused))
             continue; // No communication tower on this building
         }
 
-        // TOWER POSITIONING CALCULATION - Strategic placement adjacent to buildings
-        float tower_base_x = structure->x + structure->width + 3.0f; // Right side of building
+        // TOWER POSITIONING CALCULATION - Centered on building rooftop
+        float tower_base_x = structure->x + structure->width / 2.0f; // Center of building
         float tower_base_y = structure->y + structure->height - 10.0f; // Near roof level
 
         // TOWER DIMENSIONS - Use fixed values from structure initialization
