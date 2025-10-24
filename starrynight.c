@@ -1039,23 +1039,42 @@ int main(int argc, char *argv[]) {
 
         // No stencil operations needed for gap stars - they render in open spaces
 
-        // MAKE BUILDINGS VISIBLE - render them on top of stars
-        // CHUNK 1: FOUNDATION MELTDOWN - Removing yellow rectangle rendering
-        // glColor3f(1.0f, 0.756f, 0.027f); // Mustard yellow buildings (RGB: 255, 193, 7)
-        // for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-        //     Building *building = &buildings[build_idx];
-        //     float build_x_start = building->x;
-        //     float build_y_start = building->y;
-        //     float build_width = building->width;
-        //     float build_height = building->height;
-        //
-        //     glBegin(GL_QUADS);
-        //     glVertex2f(build_x_start, build_y_start);
-        //     glVertex2f(build_x_start + build_width, build_y_start);
-        //     glVertex2f(build_x_start + build_width, build_y_start + build_height);
-        //     glVertex2f(build_x_start, build_y_start + build_height);
-        //     glEnd();
-        // }
+        // ADD ARCHITECTURAL 3D OUTLINES - Subtle depth suggestion for mass and form
+        glLineWidth(2.5f); // Slightly thicker for architectural presence
+
+        for (int build_idx = 0; build_idx < MAX_URBAN_BUILDINGS; build_idx++) {
+            UrbanBuilding *structure = &urban_complex[build_idx];
+            if (structure->floor_quantity <= 0) continue;
+
+            float build_left = structure->x;
+            float build_bottom = structure->y;
+            float build_right = structure->x + structure->width;
+            float build_top = structure->y + structure->height;
+
+            // SHADOW EDGES - Dark outlines suggesting overhead top-right lighting
+            glColor4f(0.1f, 0.1f, 0.1f, 0.7f); // Dark shadow color
+            glBegin(GL_LINES);
+            // Bottom shadow edge
+            glVertex2f(build_left + 1.0f, build_bottom);
+            glVertex2f(build_right - 1.0f, build_bottom);
+            // Left shadow edge
+            glVertex2f(build_left, build_bottom + 1.0f);
+            glVertex2f(build_left, build_top - 1.0f);
+            glEnd();
+
+            // HIGHLIGHT EDGES - Subtle light outlines for architectural definition
+            glColor4f(0.9f, 0.9f, 0.95f, 0.6f); // Subtle light highlight color
+            glBegin(GL_LINES);
+            // Top highlight edge
+            glVertex2f(build_left + 1.0f, build_top);
+            glVertex2f(build_right - 1.0f, build_top);
+            // Right highlight edge
+            glVertex2f(build_right, build_bottom + 1.0f);
+            glVertex2f(build_right, build_top - 1.0f);
+            glEnd();
+        }
+
+        glLineWidth(1.0f); // Reset line width for subsequent rendering
 
         // Render meteors
         for (int i = 0; i < METEOR_COUNT; i++) {
