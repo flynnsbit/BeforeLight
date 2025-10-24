@@ -221,6 +221,29 @@ int main(int argc, char *argv[]) {
         // Render gradient background
         render_gradient_background(screen_width, screen_height);
 
+        // Render buildings (solid silhouettes like Dallas skyline)
+        glColor3f(0.0f, 0.0f, 0.0f); // Pure black buildings
+
+        glBegin(GL_QUADS);
+        // Create Dallas-skyline-style buildings: tall, narrow, irregular heights
+        int building_tops[] = {
+            180, 250, 200, 320, 280, 190, 340, 220, 300, 260,
+            350, 180, 290, 240, 310, 210, 270, 330, 230, 280
+        };
+
+        for (int i = 0; i < 20; i++) {
+            int x = (screen_width / 20) * i + 15;
+            int width = (screen_width / 20) - 10;
+            int height = building_tops[i];
+
+            // Building rectangle
+            glVertex2f(x, screen_height - 30);
+            glVertex2f(x + width, screen_height - 30);
+            glVertex2f(x + width, screen_height - height - 30);
+            glVertex2f(x, screen_height - height - 30);
+        }
+        glEnd();
+
         // Render meteors (behind stars for depth)
         for (int i = 0; i < METEOR_COUNT; i++) {
             if (meteors[i].life > 0) {
@@ -320,32 +343,7 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
             if (s->x < 0) s->x = screen_width;
             if (s->x > screen_width) s->x = 0;
 
-            // Check if bright star should settle into permanent city line - find nearest empty building position
-            if (s->is_bright && (s->y > screen_height - 200 || rand() % 200 < 1)) { // Frequent settling
-                // Find nearest empty building position
-                int nearest_idx = -1;
-                float min_distance = screen_width;
-                for (int j = 0; j < CITY_BUILDINGS; j++) {
-                    if (building_positions[j * 3 + 2] == 0) { // Not filled
-                        float distance = fabsf(building_positions[j * 3] - s->x);
-                        if (distance < min_distance) {
-                            min_distance = distance;
-                            nearest_idx = j;
-                        }
-                    }
-                }
-
-                if (nearest_idx >= 0 && min_distance < building_spacing * 0.8f) { // Close enough
-                    s->settled = true;
-                    s->x = building_positions[nearest_idx * 3];     // Snap to exact position
-                    s->y = building_positions[nearest_idx * 3 + 1]; // Building height
-                    building_positions[nearest_idx * 3 + 2] = 1;    // Mark as filled
-                    s->vx = 0; // Stop movement
-                    s->vy = 0;
-                    s->base_brightness = 0.95f; // Very bright city lights
-                    s->brightness = s->base_brightness;
-                }
-            }
+            // REMOVE: No settling behavior - just continuous blinking stars
         }
 
         // Settled stars don't wrap vertically, they stay in skyline
