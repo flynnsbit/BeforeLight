@@ -354,8 +354,12 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Render lit windows on TOP of building silhouettes
-        // Note: slower blinking (50% less frequent) and variable window sizes
+        // Get elapsed time for progressive lighting animation
+        static float start_time = -1.0f;
+        if (start_time < 0) start_time = current_time; // Initialize on first frame
+        float elapsed_time = current_time - start_time;
+
+        // Render lit windows on TOP of building silhouettes with progressive animation
         for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
             // Calculate actual building position to match stencil rendering
             float spacing = (float)screen_width / CITY_BUILDINGS;
@@ -366,19 +370,44 @@ int main(int argc, char *argv[]) {
             float build_height = 120.0f + (float)(rand() % 150); // 120-270 pixels tall
             float build_y_start = 50.0f; // From bottom
 
-            // Draw tiny lit windows (variable sizes: 2x2, 3x3, 4x4)
+            // Draw tiny lit windows with 10-second progressive blinking animation
             int windows_per_row = (int)build_width / 8;
             int window_rows = (int)build_height / 12;
+            int total_windows = windows_per_row * window_rows;
 
             for (int row = 0; row < window_rows; row++) {
                 for (int col = 0; col < windows_per_row; col++) {
                     float window_x = build_x_start + col * 8 + 3;
                     float window_y = build_y_start + row * 12 + 8;
 
-                    int window_idx = (build_idx * 20) + (row * windows_per_row + col);
+                    int window_id = (build_idx * 1000) + (row * windows_per_row + col); // Unique per window
+                    int window_idx = (row * windows_per_row + col);
 
-                    // SLOWER blinking (2.5% chance instead of 5% - half the frequency)
-                    bool is_lit = (rand() % 400 < 1); // Much rarer lighting
+                    // 80% start solid on, 20% start blinking. Then 80% gradually start blinking over 10 seconds
+                    float progress_ratio = elapsed_time / 10.0f; // 0 to 1 over 10 seconds
+                    if (progress_ratio > 1.0f) progress_ratio = 1.0f;
+
+                    bool is_lit = false;
+
+                    // First 80% of windows: solid on initially, then gradually start blinking
+                    if (window_idx < (int)(total_windows * 0.8f)) {
+                        // Calculate when this window should start blinking
+                        float window_progress = (float)window_idx / (total_windows * 0.8f); // 0-1 within 80%
+
+                        if (window_progress < progress_ratio) {
+                            // This window has "awakened" - start blinking
+                            float blink_phase = fmodf(elapsed_time + window_id * 0.1f, 2.0f); // 2-second cycle
+                            is_lit = blink_phase > 1.0f; // On for 1 second, off for 1 second
+                        } else {
+                            // Still solid on
+                            is_lit = true;
+                        }
+                    }
+                    // Last 20% of windows: blinking (late night arrivals)
+                    else {
+                        float blink_phase = fmodf(elapsed_time + window_id * 0.05f, 2.0f); // 2-second cycle
+                        is_lit = blink_phase > 1.0f; // On for 1 second, off for 1 second
+                    }
 
                     if (is_lit) {
                         // Variable window sizes (2x2, 3x3, or 4x4)
