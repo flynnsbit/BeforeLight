@@ -1074,20 +1074,33 @@ int main(int argc, char *argv[]) {
 
         // STAR SYSTEM RENDERING - Conditional based on user selection
         if (celestial_sphere_mode) {
-            // 🌌 DYNAMIC/CELESTIAL SPHERE MODE - Full astronomical simulation
+            // 🌌 STATIC/CELESTIAL SPHERE MODE - Fixed astronomical positions (no spinning)
             // Render astronomical star sphere with Earth rotation (sidereal ~23h56m)
             static float celestial_rotation_angle = 0.0f; // Tracks Earth's rotation
-            celestial_rotation_angle += dt * 0.000000000045f; // Very slow perceptible rotation (1000x slower)
+            static float star_declinations[STAR_COUNT]; // Pre-calculated declinations to prevent random regeneration
+            static int declinations_initialized = 0;
+
+            // Initialize star declinations once with random values, then keep them static forever
+            if (!declinations_initialized) {
+                srand((unsigned int)time(NULL)); // Initialize random seed for star generation
+                for (int star_idx = 0; star_idx < STAR_COUNT; star_idx++) {
+                    star_declinations[star_idx] = ((rand() % 200) - 100) * PI / 180.0f; // Dec: -90° to +90°
+                }
+                declinations_initialized = 1;
+            }
+
+            // Apply very slow rotation (almost imperceptible - Earth sidereal period)
+            celestial_rotation_angle += dt * 0.000000000045f; // Very slow rotation (1000x slower)
 
             glPointSize(1.0f); // Ensure proper star point size
             glBegin(GL_POINTS);
             glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // Pure white celestial stars
 
-            // Render stars positioned on celestial sphere with rotation
+            // Render stars positioned on celestial sphere with FIXED positions and rotation
             for (int i = 0; i < actual_star_count; i++) {
                 // Generate spherical coordinates for each star (simplified celestial)
-                float ra = ((float)i / actual_star_count) * 2 * PI; // RA: 0-2π
-                float dec = ((rand() % 200) - 100) * PI / 180.0f; // Dec: -90° to +90°
+                float ra = ((float)i / actual_star_count) * 2 * PI; // RA: 0-2π (even spacing)
+                float dec = star_declinations[i]; // Use FIXED pre-calculated declination (no rand()!)
 
                 // Apply Earth's rotation (sidereal day: 23h56m49s, ~4 minutes shorter than solar)
                 float adjusted_ra = ra + celestial_rotation_angle;
