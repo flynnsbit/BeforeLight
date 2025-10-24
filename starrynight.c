@@ -698,23 +698,26 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
                 glVertex2f(window_left - FRAME_WIDTH, window_top + FRAME_WIDTH);
 
                 // RENDER ILLUMINATED WINDOW INTERIOR
-                glColor4f(0.95f, 0.9f, 0.6f, 0.9f); // Warm interior light (slightly yellow)
+                glColor4f(0.7f, 0.5f, 0.25f, 0.95f); // Darker rich gold interior lighting
                 glVertex2f(window_left, window_bottom);
                 glVertex2f(window_right, window_bottom);
                 glVertex2f(window_right, window_top);
                 glVertex2f(window_left, window_top);
 
                 // GLASS REFLECTION HIGHLIGHTS - Phase 2 Surface Detailing
-                // Small white highlights on upper portions simulating light reflection
+                // Bright white highlights on upper portions simulating light reflection
                 glEnd(); // End current quads
-                glPointSize(3.0f);
-                glColor4f(0.95f, 0.95f, 0.9f, 0.5f); // Soft white highlight
+                glColor4f(1.0f, 1.0f, 0.95f, 0.8f); // Bright white highlight
+                glPointSize(2.0f); // More visible than stars
                 glBegin(GL_POINTS);
                 // Top-left corner highlight (typical sun reflection)
                 glVertex2f(window_left + 2.0f, window_top - 2.0f);
                 // Upper-middle highlight for depth
                 glVertex2f(window_left + (window_right - window_left) * 0.7f, window_top - 3.0f);
+                // Add more highlights for better glass effect
+                glVertex2f(window_left + (window_right - window_left) * 0.3f, window_top - 4.0f);
                 glEnd();
+                glPointSize(1.0f); // Reset point size for stars
                 glBegin(GL_QUADS); // Resume quads for next window
             }
         }
@@ -1028,6 +1031,7 @@ int main(int argc, char *argv[]) {
 
 
         // Render sky stars (buildings static, stars work normally)
+        glPointSize(1.0f); // Ensure proper star point size
         render_stars(stars, actual_star_count, screen_width, screen_height);
 
         // RENDER GAP STARS BETWEEN BUILDINGS - NO STENCIL NEEDED, they are in open areas

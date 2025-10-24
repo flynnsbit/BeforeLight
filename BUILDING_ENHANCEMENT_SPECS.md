@@ -152,9 +152,9 @@ This document outlines comprehensive architectural improvements to transform sim
 - [ ] Building archetype classification
 - [ ] Performance baseline measurement
 
-#### Phase 2: Surface Detailing
-- [ ] Lighting gradient effects
-- [ ] Glass reflection highlights
+#### Phase 2: Surface Detailing ✅ ONGOING
+- [x] Lighting gradient effects - Multi-layer rendering creates realistic depth with center brightness fading to edges
+- [x] Glass reflection highlights - Added top corner highlights simulating light reflection on window glass
 - [ ] Basic shadow effects
 - [ ] Architectural element framework
 
