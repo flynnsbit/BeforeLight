@@ -24,10 +24,12 @@
 #include <stdbool.h>
 
 #define PI 3.14159265359f
-#define STAR_COUNT 500  // Space for drifting stars only
+#define STAR_COUNT 500  // Space for drifting sky stars only
+#define BACKGROUND_STAR_COUNT 50000  // Massive star count behind buildings for density effect
 #define METEOR_COUNT 10
 #define METEOR_PARTICLES 20
 #define CITY_BUILDINGS 13     // Number of solid buildings with windows
+#define BUILDING_FADE_DISTANCE 150   // Distance over which star density fades to normal
 
 float building_spacing; // Global building spacing
 
@@ -52,6 +54,9 @@ typedef struct {
     bool settled;         // Whether this star has settled into its final position
     int settled_layer;    // What skyline layer this belongs to (for building height)
 } Star;
+
+// Background star system (behind buildings only)
+Star *background_stars; // Global array for background stars
 
 typedef struct {
     float x, y;           // Current position
@@ -145,6 +150,11 @@ int main(int argc, char *argv[]) {
     // Initialize OpenGL
     init_opengl(screen_width, screen_height);
 
+    // FORCE IMMEDIATE BUFFER SWAPPING - DISABLE ALL FADING EFFECTS
+    SDL_GL_SetSwapInterval(0);  // Disable VSYNC and any fade transitions
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); // Ensure double buffering
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8); // Stencil buffer for masking
+
     // SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
     SDL_ShowCursor(0);  // Hide mouse cursor
 
@@ -220,6 +230,58 @@ int main(int argc, char *argv[]) {
     Meteor meteors[METEOR_COUNT];
     for (int i = 0; i < METEOR_COUNT; i++) {
         meteors[i].life = 0;  // Start inactive
+    }
+
+    // Initialize 50000 background stars DENSELY CONCENTRATED BEHIND BUILDINGS
+    background_stars = malloc(BACKGROUND_STAR_COUNT * sizeof(Star));
+
+    // Calculate how many stars per building for even distribution
+    int stars_per_building = BACKGROUND_STAR_COUNT / CITY_BUILDINGS;
+    int star_idx = 0;
+
+    for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
+        // Calculate building position (use same logic as rendering)
+        float spacing = (float)screen_width / CITY_BUILDINGS;
+        float random_offset = (float)(rand() % (int)(spacing * 0.6f) - spacing * 0.3f);
+        float build_center_x = build_idx * spacing + random_offset + 15;
+        float build_width = 12 + rand() % 20; // Same size calculation
+        float build_height = 120.0f + (float)(rand() % 150);
+        float build_bottom_y = 50.0f;
+
+        // Create densely clustered stars behind this building
+        for (int j = 0; j < stars_per_building && star_idx < BACKGROUND_STAR_COUNT; j++) {
+            Star *star = &background_stars[star_idx];
+
+            // Cluster stars densely around the building area with some spread
+            star->x = build_center_x + build_width * 0.5f +  // Center on building
+                     (float)(rand() % (int)(build_width * 2.0f) - build_width); // Spread across building width
+
+            star->y = build_bottom_y + build_height * (float)rand() / RAND_MAX; // Distribute height behind building
+            // Add some stars above and below the building for halo effect
+            if (rand() % 3 == 0) { // 33% of stars above building
+                star->y += (float)(rand() % 100 - 50); // +/- 50 pixels
+            } else if (rand() % 3 == 1) { // 33% below building
+                star->y = build_bottom_y - 20 - (float)(rand() % 50); // Below building base
+            } // 33% within building height range (already set)
+
+            // 300% FASTER motion - make them equally slower
+            star->vx = (float)(rand() % 10 - 5) / 600.0f; // 3x slower horizontal drift
+            star->vy = (float)(rand() % 10 - 5) / 600.0f; // 3x slower vertical drift
+
+            // DIMMER for background depth effect - much less visible
+            star->base_brightness = 0.05f + (float)(rand() % 25) / 100.0f; // 0.05-0.30 range (much dimmer)
+            star->brightness = star->base_brightness;
+
+            // 300% SLOWER TWINKLING (3x slower by dividing speeds by 3)
+            star->twinkle_phase = (float)(rand() % 628) / 100.0f;
+            star->twinkle_speed = (0.1f + (float)(rand() % 50) / 100.0f) / 3.0f; // Very slow 1/3 speed twinkling
+
+            star->size = 0.3f + (float)(rand() % 10) / 10.0f; // Tinier 0.3-1.3 pixels
+            star->is_bright = false; // Background stars never glow
+            star->settled = false;
+
+            star_idx++;
+        }
     }
 
     Uint64 last_time = SDL_GetTicks64();
@@ -341,11 +403,46 @@ int main(int argc, char *argv[]) {
         glStencilFunc(GL_EQUAL, 0, 0xFF);  // Only render where stencil is 0
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-        // Render stars only where stencil allows (not behind buildings) - CREATES SILHOUETTES
-        render_stars(stars, actual_star_count, screen_width, screen_height);
+        // STARS COMPLETELY DISABLED - no star rendering at all
+        // render_stars(stars, actual_star_count, screen_width, screen_height);
+
+        // ALL STARS COMPLETELY DISABLED - no star rendering of any kind
+        // RENDER BACKGROUND STARS BEHIND BUILDINGS ONLY (stencil=1 means building area)
+        // glEnable(GL_STENCIL_TEST);
+        // glStencilFunc(GL_EQUAL, 1, 0xFF);  // Only render where stencil is 1 (behind buildings)
+        // glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+        // Update and render background stars
+        // update_stars(background_stars, BACKGROUND_STAR_COUNT, dt * speed_mult * 0.1f,
+        //              screen_width, screen_height); // Much slower movement
+        // render_stars(background_stars, BACKGROUND_STAR_COUNT, screen_width, screen_height);
 
         // Disable stencil test temporarily for meteors and windows
         glDisable(GL_STENCIL_TEST);
+
+        // MAKE BUILDINGS VISIBLE - render them on top of stars
+        glColor3f(1.0f, 0.756f, 0.027f); // Mustard yellow buildings (RGB: 255, 193, 7)
+        for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
+            // Variable building positions and sizes
+            float spacing = (float)screen_width / CITY_BUILDINGS;
+            float random_offset = (float)(rand() % (int)(spacing * 0.6f) - spacing * 0.3f);
+            float build_x_start = (float)build_idx * spacing + random_offset + 15;
+
+            // Skinnier buildings with variable widths
+            float base_width = (float)(12 + rand() % 20); // 12-32 pixels wide
+            float build_width = base_width;
+
+            // Variable heights
+            float build_height = 120.0f + (float)(rand() % 150); // 120-270 pixels tall
+            float build_y_start = 50.0f; // From bottom
+
+            glBegin(GL_QUADS);
+            glVertex2f(build_x_start, build_y_start);
+            glVertex2f(build_x_start + build_width, build_y_start);
+            glVertex2f(build_x_start + build_width, build_y_start + build_height);
+            glVertex2f(build_x_start, build_y_start + build_height);
+            glEnd();
+        }
 
         // Render meteors
         for (int i = 0; i < METEOR_COUNT; i++) {
@@ -354,79 +451,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Get elapsed time for progressive lighting animation
-        static float start_time = -1.0f;
-        if (start_time < 0) start_time = current_time; // Initialize on first frame
-        float elapsed_time = current_time - start_time;
-
-        // Render lit windows on TOP of building silhouettes with progressive animation
-        for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-            // Calculate actual building position to match stencil rendering
-            float spacing = (float)screen_width / CITY_BUILDINGS;
-            float random_offset = (float)(rand() % (int)(spacing * 0.6f) - spacing * 0.3f);
-            float build_x_start = (float)build_idx * spacing + random_offset + 15;
-            float base_width = (float)(12 + rand() % 20); // 12-32 pixels wide
-            float build_width = base_width;
-            float build_height = 120.0f + (float)(rand() % 150); // 120-270 pixels tall
-            float build_y_start = 50.0f; // From bottom
-
-            // Draw tiny lit windows with 10-second progressive blinking animation
-            int windows_per_row = (int)build_width / 8;
-            int window_rows = (int)build_height / 12;
-            int total_windows = windows_per_row * window_rows;
-
-            for (int row = 0; row < window_rows; row++) {
-                for (int col = 0; col < windows_per_row; col++) {
-                    float window_x = build_x_start + col * 8 + 3;
-                    float window_y = build_y_start + row * 12 + 8;
-
-                    int window_id = (build_idx * 1000) + (row * windows_per_row + col); // Unique per window
-                    int window_idx = (row * windows_per_row + col);
-
-                    // 80% start solid on, 20% start blinking. Then 80% gradually start blinking over 10 seconds
-                    float progress_ratio = elapsed_time / 10.0f; // 0 to 1 over 10 seconds
-                    if (progress_ratio > 1.0f) progress_ratio = 1.0f;
-
-                    bool is_lit = false;
-
-                    // First 80% of windows: solid on initially, then gradually start blinking
-                    if (window_idx < (int)(total_windows * 0.8f)) {
-                        // Calculate when this window should start blinking
-                        float window_progress = (float)window_idx / (total_windows * 0.8f); // 0-1 within 80%
-
-                        if (window_progress < progress_ratio) {
-                            // This window has "awakened" - start blinking
-                            float blink_phase = fmodf(elapsed_time + window_id * 0.1f, 2.0f); // 2-second cycle
-                            is_lit = blink_phase > 1.0f; // On for 1 second, off for 1 second
-                        } else {
-                            // Still solid on
-                            is_lit = true;
-                        }
-                    }
-                    // Last 20% of windows: blinking (late night arrivals)
-                    else {
-                        float blink_phase = fmodf(elapsed_time + window_id * 0.05f, 2.0f); // 2-second cycle
-                        is_lit = blink_phase > 1.0f; // On for 1 second, off for 1 second
-                    }
-
-                    if (is_lit) {
-                        // Variable window sizes (2x2, 3x3, or 4x4)
-                        int window_size = 2 + (rand() % 3); // 2, 3, or 4 pixels
-
-                        // Warm yellow apartment light
-                        glColor4f(1.0f, 0.9f, 0.8f, 1.0f);
-
-                        // Variable size square window
-                        glBegin(GL_QUADS);
-                        glVertex2f(window_x, window_y);
-                        glVertex2f(window_x + window_size, window_y);
-                        glVertex2f(window_x + window_size, window_y + window_size);
-                        glVertex2f(window_x, window_y + window_size);
-                        glEnd();
-                    }
-                }
-            }
-        }
+        // NO WINDOW RENDERING AT ALL - removed entire window rendering system
 
         // Swap buffers
         SDL_GL_SwapWindow(window);
@@ -593,7 +618,7 @@ void render_gradient_background(int screen_width, int screen_height) {
     glEnd();
 }
 
-void init_meteor(Meteor *meteor, int screen_width, int screen_height) {
+void init_meteor(Meteor *meteor, int screen_width __attribute__((unused)), int screen_height) {
     meteor->x = -50; // Start off-screen left
     meteor->y = screen_height * 0.6f + (rand() % (screen_height / 3)); // Upper third
 
@@ -612,7 +637,8 @@ void init_meteor(Meteor *meteor, int screen_width, int screen_height) {
     }
 }
 
-void update_meteor(Meteor *meteor, float dt, int screen_width, int screen_height) {
+void update_meteor(Meteor *meteor, float dt, int screen_width,
+                  __attribute__((unused)) int screen_height) {
     if (meteor->life <= 0) return;
 
     meteor->x += meteor->vx * dt;
@@ -637,7 +663,7 @@ void update_meteor(Meteor *meteor, float dt, int screen_width, int screen_height
     }
 }
 
-void render_meteor(Meteor *meteor, int screen_width, int screen_height) {
+void render_meteor(Meteor *meteor, int screen_width __attribute__((unused)), int screen_height __attribute__((unused))) {
     if (meteor->life <= 0 || !meteor->active) return;
 
     // Render particle trail
