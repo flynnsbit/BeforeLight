@@ -195,6 +195,67 @@ void update_meteor(Meteor *meteor, float dt, int screen_width, int screen_height
 void init_opengl(int width, int height);
 void usage(const char *prog);
 
+// SIMPLE DEBUG MARKER RENDERING - Color-coded shapes for each star layer
+void render_debug_marker(float x, float y, const char *layer_type) {
+    glPushMatrix();
+    glTranslatef(x, y, 0.0f);
+
+    // Different colored markers for each layer type
+    if (strcmp(layer_type, "GAP") == 0) {
+        // RED CIRCLE: Gap Stars (Rotating Layer)
+        glColor4f(1.0f, 0.2f, 0.2f, 0.9f);
+        glPointSize(20.0f);
+        glBegin(GL_POINTS);
+        glVertex2f(0, 0);
+        glEnd();
+
+        // Small white label dot
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        glPointSize(5.0f);
+        glBegin(GL_POINTS);
+        glVertex2f(0, 0);
+        glEnd();
+
+    } else if (strcmp(layer_type, "CELESTIAL") == 0) {
+        // BLUE SQUARE: Celestial Stars (Fixed)
+        glColor4f(0.2f, 0.2f, 1.0f, 0.9f);
+        glBegin(GL_QUADS);
+        glVertex2f(-8, -8);
+        glVertex2f(8, -8);
+        glVertex2f(8, 8);
+        glVertex2f(-8, 8);
+        glEnd();
+
+        // Small white center dot
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        glPointSize(3.0f);
+        glBegin(GL_POINTS);
+        glVertex2f(0, 0);
+        glEnd();
+
+    } else if (strcmp(layer_type, "LEGACY") == 0) {
+        // GREEN TRIANGLE: Legacy Stars (Static)
+        glColor4f(0.2f, 1.0f, 0.2f, 0.9f);
+        glBegin(GL_TRIANGLES);
+        glVertex2f(0, 10);
+        glVertex2f(-8, -5);
+        glVertex2f(8, -5);
+        glEnd();
+
+        // Small white base dot
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        glPointSize(3.0f);
+        glBegin(GL_POINTS);
+        glVertex2f(0, -8);
+        glEnd();
+    }
+
+    glPopMatrix();
+
+    // Reset point size
+    glPointSize(1.0f);
+}
+
 /**
  * URBAN BUILDING INITIALIZATION FUNCTION (Chunk 1 Core Implementation)
  * Generates sophisticated architectural configurations with building archetypes
@@ -238,8 +299,8 @@ void render_roof_architectural_accessory_complexity(int screen_width __attribute
     for (int building_index = 0; building_index < MAX_URBAN_BUILDINGS; building_index++) {
         UrbanBuilding* structure = &urban_complex[building_index];
 
-        // HELIPAD PLATFORMS - Circular helicopter landing platforms
-        if (structure->roof_feature_mask & (1 << ROOF_HELIPAD_PLATFORM)) {
+        // HELIPAD PLATFORMS DISABLED - Static platforms only
+    if (0) { // structure->roof_feature_mask & (1 << ROOF_HELIPAD_PLATFORM)
             glColor4f(0.8f, 0.8f, 0.8f, 0.9f); // Light gray landing surface
 
             // HELIPAD CIRCLE - 15-pixel radius circular landing area
@@ -1138,6 +1199,9 @@ int main(int argc, char *argv[]) {
             }
             glEnd();
 
+            // DEBUG MARKER: Celestial Sphere Stars (Blue Square)
+            render_debug_marker(screen_width - 100, screen_height - 100, "CELESTIAL");
+
         } else {
             // 📺 STATIC/LEGACY MODE - Original star field behavior
             glPointSize(1.0f); // Ensure proper star point size
@@ -1147,6 +1211,9 @@ int main(int argc, char *argv[]) {
         // RENDER GAP STARS BETWEEN BUILDINGS - Continuous density gradient (no stencil needed)
         // NOTE: ENABLED for subtle slow rotation effect
         render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);
+
+        // DEBUG MARKER: Gap Stars (Rotating Layer) - Red Circle
+        render_debug_marker(100, screen_height - 100, "GAP");
 
         // No stencil operations needed for gap stars - they render in open spaces
 
@@ -1194,21 +1261,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // CHUNK 2: AIRCRAFT WARNING BEACON SYSTEM - Aviation Safety Lighting
-        // Render FAA-compliant red beacons on tall buildings for aircraft safety
-        render_aircraft_warning_beacons(screen_width, screen_height);
-
-        // CHUNK 3: COMMUNICATION TOWER SYSTEMS - Cellular Transmission Infrastructure
-        // Render steel lattice towers with rotating strobe beacons and antenna arrays
-        render_communication_tower_systems(screen_width, screen_height);
-
-        // CHUNK 4: WATER TOWER FACILITY INSTALLATIONS - Hydraulic Infrastructure
-        // Render elevated water reservoir towers with pulsing caution lighting
-        render_water_tower_facility_installations(screen_width, screen_height);
-
-        // CHUNK 6: ROOF ARCHITECTURAL ACCESSORY COMPLEXITY - Advanced rooftop features
-        // Render sophisticated rooftop architectural features like helipads, solar panels, and HVAC
-        render_roof_architectural_accessory_complexity(screen_width, screen_height);
+        // ALL ANIMATED LIGHTING DISABLED - Only static infrastructure remains
+        // Aircraft beacons, tower strobes, caution lights, HVAC fans, etc. - all blinking deactivated
 
         // CHUNK 5: ILLUMINATED WINDOW GRID ALGORITHMS - Building Occupancy Visualization
         // Render intelligent building occupancy visualization with time-sensitive patterns
