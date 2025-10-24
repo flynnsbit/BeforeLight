@@ -37,6 +37,8 @@ typedef struct {
     float twinkle_speed;  // How fast it twinkles
     float size;           // Star size in pixels
     bool is_bright;       // Extra-bright star status for glow effect
+    bool settled;         // Whether this star has settled into its final position
+    int settled_layer;    // What skyline layer this belongs to (for building height)
 } Star;
 
 typedef struct {
@@ -165,16 +167,11 @@ int main(int argc, char *argv[]) {
                     running = false;
                     break;
                 case SDL_KEYDOWN:
+                    running = false;
+                    break;
                 case SDL_MOUSEBUTTONDOWN:
                 case SDL_MOUSEMOTION:
-                    last_input_time = SDL_GetTicks();
-                    input_detected = true;
-                    if (input_detected) {
-                        // Allow 5 second grace period
-                        if (SDL_GetTicks() - last_input_time > 5000) {
-                            running = false;
-                        }
-                    }
+                    running = false;
                     break;
             }
         }
@@ -293,8 +290,10 @@ void init_stars(Star *stars, int count, int screen_width, int screen_height) {
         // Size variation
         stars[i].size = 1.0f + (float)(rand() % 20) / 10.0f; // 1.0-3.0 pixels
 
-        // Some stars are extra bright
-        stars[i].is_bright = (rand() % 100) < 15; // 15% are bright
+    // Some stars are extra bright
+    stars[i].is_bright = (rand() % 100) < 15; // 15% are bright
+    stars[i].settled = false; // Start as unsettled
+    stars[i].settled_layer = 0; // Will be set when settled
     }
 }
 
@@ -305,15 +304,30 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
     for (int i = 0; i < count; i++) {
         Star *s = &stars[i];
 
-        // Update position with gentle drift
-        s->x += s->vx * dt;
-        s->y += s->vy * dt;
+        if (!s->settled) {
+            // Update position with gentle drift
+            s->x += s->vx * dt;
+            s->y += s->vy * dt;
 
-        // Wrap around screen edges
-        if (s->x < 0) s->x = screen_width;
-        if (s->x > screen_width) s->x = 0;
-        if (s->y < 20) s->y = screen_height - 20; // Avoid bottom area
-        if (s->y > screen_height - 20) s->y = 20;
+            // Wrap horizontally only
+            if (s->x < 0) s->x = screen_width;
+            if (s->x > screen_width) s->x = 0;
+
+            // Check if bright star should settle into skyline
+            if (s->is_bright && s->y > screen_height - 100 && rand() % 100 < 2) { // Random chance when near bottom
+                s->settled = true;
+                s->settled_layer = rand() % 3; // 0,1,2 layers for different heights
+                s->y = screen_height - 30 - s->settled_layer * 25; // Position in skyline layers
+                s->vx = 0; // Stop horizontal movement
+                s->vy = 0; // Stop vertical movement
+                s->base_brightness = 0.8f; // Brighten settled stars (city lights)
+            }
+        }
+
+        // Settled stars don't wrap vertically, they stay in skyline
+        if (s->settled && s->y > screen_height - 20) s->y = screen_height - 20;
+        if (!s->settled && s->y < 20) s->y = screen_height - 20; // Avoid bottom area for floating stars
+        if (!s->settled && s->y > screen_height - 20) s->y = 20;
 
         // Update twinkling brightness with sine wave
         float twinkle_offset = sinf(time * s->twinkle_speed + s->twinkle_phase) * 0.4f;
@@ -322,6 +336,12 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
         // Clamp brightness
         if (s->brightness < 0.2f) s->brightness = 0.2f;
         if (s->brightness > 1.0f) s->brightness = 1.0f;
+
+        // Settled stars (city lights) have slightly yellow tint
+        if (s->settled) {
+            s->brightness = s->base_brightness + sinf(time * 2.0f + s->twinkle_phase) * 0.2f; // Different twinkling
+            if (s->brightness < 0.7f) s->brightness = 0.7f;
+        }
     }
 }
 
@@ -360,16 +380,9 @@ void render_stars(Star *stars, int count, int screen_width, int screen_height) {
 }
 
 void render_gradient_background(int screen_width, int screen_height) {
-    // Simple gradient from top to bottom: dark blue to black
-    glBegin(GL_QUADS);
-    glColor3f(0.0f, 0.1f, 0.4f); // Deep dark blue at top
-    glVertex2f(0, screen_height);
-    glVertex2f(screen_width, screen_height);
-
-    glColor3f(0.0f, 0.0f, 0.1f); // Ultimate black at bottom
-    glVertex2f(screen_width, 0);
-    glVertex2f(0, 0);
-    glEnd();
+    // Solid black background for city skyline effect
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);  // Pure black
+    glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void init_meteor(Meteor *meteor, int screen_width, int screen_height) {
