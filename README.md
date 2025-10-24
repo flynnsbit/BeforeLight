@@ -114,6 +114,16 @@
 - **Smooth star interpolation** for realistic formation timelines
 - **Runtime Controls**: `-s` animation speed, `-f` display mode
 
+### 🏙️ Cityscape
+*Authentic yellow buildings with blinking apartment windows*
+
+- **15 yellow buildings** with randomized widths and heights
+- **4x4 pixel apartment windows** that light up randomly
+- ** Staggered blinking animation** maintaining 20-40% illumination
+- **0.5-2 second toggle cycles** for realistic apartment lighting
+- **Mustard yellow facades** (#FFC107) exactly matching reference
+- **Runtime Controls**: `-s` simulation speed, `-f` fullscreen toggle
+
 ### 🌑 Fade Out
 *Expanding black hole screen absorption*
 
@@ -173,6 +183,7 @@ make toastersaver   # Classic flying toasters
 make logo           # Morphing logo animation
 make rainstorm      # Weather with lightning
 make spotlight      # Desktop screen capture
+make cityscape      # Yellow buildings with blinking windows
 
 # Special Effects
 make lifeforms      # Star constellation formation
@@ -205,6 +216,7 @@ make randomizer     # Cycles through all savers
 ./build/warp -f 1         # Starfield tunnel effect
 ./build/rainstorm -f 1    # Weather with lightning
 ./build/logo -f 1         # Morphing logo animation
+./build/cityscape -f 1    # Yellow buildings with blinking windows
 
 # Meta Screensaver
 ./build/randomizer -d 30 -f 1  # Cycles all screensavers every 30s
