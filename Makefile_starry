@@ -1,0 +1,20 @@
+# Starry Night Screensaaver Makefile
+# Build for Arch Linux / Hyprland / Wayland
+
+CC = gcc
+CFLAGS = -Wall -Wextra -O2 `sdl2-config --cflags`
+LDFLAGS = `sdl2-config --libs` -lGL -lGLU -lm
+
+starrynight: starrynight.c
+	$(CC) $(CFLAGS) -o starrynight starrynight.c $(LDFLAGS)
+
+clean:
+	rm -f starrynight *.o
+
+install-deps-arch:
+	sudo pacman -S sdl2 mesa glu --needed
+
+run: starrynight
+	./starrynight -s 1.0 -d 0.5 -m 2.0
+
+.PHONY: clean install-deps-arch run starrynight
