@@ -835,16 +835,19 @@ int main(int argc, char *argv[]) {
     int target_sky_density = (int)(STAR_COUNT * (0.3f + star_density * 0.7f));
 
     // Create smooth density gradient: dense at bottom → sparse at top (matching -d parameter)
+    // NOW: EXTENDED 2X SCREEN SIZE AREA to prevent visible boundaries during slow rotation
     int star_idx = 0;
 
     for (int j = 0; j < GAP_STAR_COUNT; j++) {
         Star *star = &gap_stars[star_idx];
 
-        // X position: uniform across full width
-        star->x = (float)rand() / RAND_MAX * screen_width;
+        // X POSITION: 2X extended area to prevent boundary visibility during rotation
+        // Range: -screen_width to 2*screen_width (3x total width, centered on screen)
+        star->x = -screen_width + ((float)rand() / RAND_MAX) * (3.0f * screen_width);
 
         // Y POSITION SCHEME: Inverse probability sampling for continuous density gradient
         // Higher probability of selection at lower heights, matching sky density at top
+        // ALSO EXTENDED: 2X height area for complete boundary-free rotation
         float normalized_height;
         int attempts = 0;
         const int max_attempts = 100;
@@ -863,11 +866,11 @@ int main(int argc, char *argv[]) {
             attempts++;
         } while (attempts < max_attempts);
 
-        // Convert normalized height to actual screen coordinates
-        star->y = normalized_height * screen_height;
+        // Convert normalized height to EXTENDED screen coordinates (2X area)
+        star->y = -screen_height + normalized_height * (3.0f * screen_height);
 
-        // Define motion
-        star->vx = (float)(rand() % 20 - 10) / 500.0f; // Very slow drift
+        // Define motion (no longer used - replaced with rotation for gap stars)
+        star->vx = (float)(rand() % 20 - 10) / 500.0f; // Very slow drift (kept for compatibility)
         star->vy = (float)(rand() % 20 - 10) / 500.0f;
 
         // Standard star properties - slightly dimmer than sky stars for layering
@@ -877,7 +880,7 @@ int main(int argc, char *argv[]) {
         star->twinkle_speed = 0.6f + (float)(rand() % 80) / 100.0f; // Varied twinkling
         star->size = 0.8f + (float)(rand() % 15) / 10.0f; // Smaller 0.8-2.3 pixels
         star->is_bright = (rand() % 100) < 15; // 15% bright gap stars
-        star->building_gap = -1;
+        star->building_gap = -1; // Mark as gap star for rotation logic
 
         star_idx++;
     }
@@ -1320,9 +1323,9 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
     static float global_star_rotation = 0.0f; // Global rotation angle for gap stars
     time += dt;
 
-    // Apply super slow rotation to gap stars (using special system detection)
+    // Apply SUPER SLOW rotation to gap stars for perfect celestial motion
     // NOTE: Only applies slow rotation to gap stars via this function
-    global_star_rotation += dt * 0.001f; // VERY slow rotation (about 1 degree per second)
+    global_star_rotation += dt * 0.0005f; // INSANELY slow rotation (about 0.5 degrees per second - halved!)
 
     for (int i = 0; i < count; i++) {
         Star *s = &stars[i];
