@@ -1490,6 +1490,11 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
                     urban_structure->roof_feature_mask |= (1 << feature_type);
                     // Ensure single antenna per tower for exact 2-antennas-visible requirement
                     urban_structure->antenna_element_array = 1;
+                    // Add 10% height variability to tower heights (centered on 60px height)
+                    float base_height = 60.0f;
+                    float variability = 10.0f; // ±10% range = ±6 pixels
+                    float height_random = (rand() % 201 - 100) / 100.0f; // -1.0 to +1.0
+                    urban_structure->tower_height_pixels = (int)(base_height + height_random * variability);
                 }
                 // Each building gets at most one item, so we can break after finding
                 break;
