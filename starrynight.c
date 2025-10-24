@@ -25,22 +25,10 @@
 
 #define PI 3.14159265359f
 #define STAR_COUNT 500  // Space for drifting sky stars only
-#define BACKGROUND_STAR_COUNT 50000  // Massive star count behind buildings for density effect
+#define GAP_STAR_COUNT 10000  // Stars specifically in gaps between buildings
 #define METEOR_COUNT 10
 #define METEOR_PARTICLES 20
 #define CITY_BUILDINGS 13     // Number of solid buildings with windows
-#define BUILDING_FADE_DISTANCE 150   // Distance over which star density fades to normal
-
-float building_spacing; // Global building spacing
-
-// Predefined building templates (relative to building position)
-// Each building has a set of light positions that get filled over time
-typedef struct {
-    float x, y;     // Position relative to building base
-} BuildingPoint;
-
-BuildingPoint building_templates[6][50]; // 6 building types, max 50 points each
-int building_point_counts[6]; // How many points per building
 
 typedef struct {
     float x, y;           // Position in pixels
@@ -51,12 +39,20 @@ typedef struct {
     float twinkle_speed;  // How fast it twinkles
     float size;           // Star size in pixels
     bool is_bright;       // Extra-bright star status for glow effect
-    bool settled;         // Whether this star has settled into its final position
-    int settled_layer;    // What skyline layer this belongs to (for building height)
+    int building_gap;     // Which building gap this star belongs to (-1 for sky)
 } Star;
 
-// Background star system (behind buildings only)
-Star *background_stars; // Global array for background stars
+// Static building properties - calculated once during initialization
+typedef struct {
+    float x, y;        // Bottom-left position
+    float width, height; // Building dimensions
+    float right_edge;  // Right edge x coordinate
+} Building;
+
+Building buildings[CITY_BUILDINGS]; // Static building array
+
+// Gap stars - fill spaces between buildings
+Star *gap_stars; // Stars that specifically fill gaps between buildings
 
 typedef struct {
     float x, y;           // Current position
@@ -125,6 +121,92 @@ int main(int argc, char *argv[]) {
     int screen_width = dm.w;
     int screen_height = dm.h;
 
+    // PRE-CALCULATE ALL BUILDING PROPERTIES - ONLY ONCE AT STARTUP
+    // NOW WITH VARIABLE WIDTHS (UP TO 50% WIDER)
+    for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
+        float spacing = (float)screen_width / CITY_BUILDINGS;
+        float random_offset = (float)(rand() % (int)(spacing * 0.6f) - spacing * 0.3f);
+
+        // Store static building properties
+        buildings[build_idx].x = (float)build_idx * spacing + random_offset + 15;
+
+        // VARIABLE WIDTHS: from base (12-32px) up to 50% wider for architectural variation
+        float base_width = (float)(12 + rand() % 20); // 12-32 pixels
+        float width_multiplier = 1.25f + (float)rand() / RAND_MAX * 0.75f; // 1.25-2.0x (25-50% wider)
+        buildings[build_idx].width = base_width * width_multiplier; // 15-64 pixels wide
+
+        buildings[build_idx].height = 120.0f + (float)(rand() % 150); // 120-270 pixels tall
+        buildings[build_idx].y = 50.0f; // From bottom - all buildings align at same y
+        buildings[build_idx].right_edge = buildings[build_idx].x + buildings[build_idx].width;
+    }
+
+    // CALCULATE CONTINUOUS STAR FIELD ACROSS ENTIRE SCREEN WIDTH
+    // Stars will be positioned across full horizontal range with vertical density control
+    gap_stars = malloc(GAP_STAR_COUNT * sizeof(Star));
+
+    // Stars are now distributed across full screen width (no gaps - everything is "open area")
+    // Vertical distribution controls where stars appear relative to buildings
+
+    // CREATE CONTINUOUS STAR FIELD WITH GRADUAL HEIGHT-BASED DENSITY ACROSS ENTIRE WIDTH
+    int star_idx = 0;
+
+    // Find the maximum building height to determine blend zones
+    float max_building_height = 0.0f;
+    for (int i = 0; i < CITY_BUILDINGS; i++) {
+        if (buildings[i].height > max_building_height) {
+            max_building_height = buildings[i].height;
+        }
+    }
+
+    // Define density zones for continuous coverage
+    // Zone 1: Building area (dense - near ground level)
+    // Zone 2: Above building tops (gradually decreasing)
+    // Zone 3: Upper atmosphere (matching sky density)
+
+    float building_top_level = buildings[0].y + max_building_height; // Top of tallest building
+    float zone2_end = building_top_level + (max_building_height * 0.5f); // 50% above buildings
+    float zone3_start = screen_height / 4; // Where sky stars begin
+
+    // Create stars across entire screen width with height-based density
+    for (int j = 0; j < GAP_STAR_COUNT; j++) {
+        Star *star = &gap_stars[star_idx];
+
+        // Position across full screen width (not just gaps)
+        star->x = (float)rand() / RAND_MAX * screen_width;
+
+        // Position with gradual density decrease from building level to full height
+        // Map star to different vertical zones with varying density
+        float rand_val = (float)rand() / RAND_MAX;
+
+        if (rand_val < 0.6f) {
+            // 60% of stars in dense building level zone (near ground, between buildings)
+            star->y = buildings[0].y + rand_val / 0.6f * max_building_height;
+        } else if (rand_val < 0.9f) {
+            // 30% of stars in medium density zone (above building tops)
+            float zone_progress = (rand_val - 0.6f) / 0.3f; // 0-1 in this zone
+            star->y = building_top_level + zone_progress * (zone2_end - building_top_level);
+        } else {
+            // 10% of stars in light upper zone (towards where sky stars begin)
+            float zone_progress = (rand_val - 0.9f) / 0.1f; // 0-1 in this zone
+            star->y = zone3_start + zone_progress * (screen_height - zone3_start);
+        }
+
+        // Define motion
+        star->vx = (float)(rand() % 20 - 10) / 500.0f; // Very slow drift
+        star->vy = (float)(rand() % 20 - 10) / 500.0f;
+
+        // Standard star properties - slightly dimmer than sky stars for layering
+        star->base_brightness = 0.3f + (float)(rand() % 50) / 100.0f; // 0.3-0.8 range
+        star->brightness = star->base_brightness;
+        star->twinkle_phase = (float)(rand() % 628) / 100.0f;
+        star->twinkle_speed = 0.6f + (float)(rand() % 80) / 100.0f; // Varied twinkling
+        star->size = 0.8f + (float)(rand() % 15) / 10.0f; // Smaller 0.8-2.3 pixels
+        star->is_bright = (rand() % 100) < 15; // 15% bright gap stars (fewer than sky)
+        star->building_gap = -1; // No longer tracking specific gaps
+
+        star_idx++;
+    }
+
     // Create fullscreen window using SDL_WINDOW_FULLSCREEN_DESKTOP for proper Hyprland integration
     SDL_Window *window = SDL_CreateWindow("Starry Night",
                                           SDL_WINDOWPOS_UNDEFINED,
@@ -158,68 +240,7 @@ int main(int argc, char *argv[]) {
     // SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
     SDL_ShowCursor(0);  // Hide mouse cursor
 
-    // Initialize building templates with light positions
-    building_spacing = (float)screen_width / CITY_BUILDINGS;
-
-    // Building 0: Tall rectangular building
-    building_point_counts[0] = 25;
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 5; j++) {
-            building_templates[0][i * 5 + j].x = (float)i * 15;
-            building_templates[0][i * 5 + j].y = (float)j * 20 + 20;
-        }
-    }
-
-    // Building 1: Triangular/wedge shape
-    building_point_counts[1] = 21;
-    int idx = 0;
-    for (int y = 5; y > 0; y--) {
-        for (int x = 0; x < y * 2; x++) {
-            building_templates[1][idx].x = (float)x * 8 - y * 8;
-            building_templates[1][idx].y = (float)(6 - y) * 25 + 20;
-            idx++;
-        }
-    }
-
-    // Building 2: Cross shape
-    building_point_counts[2] = 25;
-    idx = 0;
-    for (int i = 0; i < 5; i++) {
-        building_templates[2][idx++].x = 30; building_templates[2][idx-1].y = (float)i * 20 + 20; // Vertical bar
-        building_templates[2][idx++].x = (float)i * 15; building_templates[2][idx-1].y = 60; // Horizontal bar
-    }
-
-    // Building 3: Random scattered lights
-    building_point_counts[3] = 20;
-    for (int i = 0; i < 20; i++) {
-        building_templates[3][i].x = (float)(rand() % 80 - 40);
-        building_templates[3][i].y = (float)(rand() % 100 + 20);
-    }
-
-    // Building 4: Spiral pattern
-    building_point_counts[4] = 24;
-    for (int i = 0; i < 24; i++) {
-        float angle = (float)i / 24.0f * 2 * PI;
-        building_templates[4][i].x = cosf(angle) * (float)i * 1.5f;
-        building_templates[4][i].y = sinf(angle) * (float)i * 1.5f + 50;
-    }
-
-    // Building 5: Grid pattern
-    building_point_counts[5] = 16;
-    idx = 0;
-    for (int y = 0; y < 4; y++) {
-        for (int x = 0; x < 4; x++) {
-            building_templates[5][idx].x = (float)x * 20;
-            building_templates[5][idx].y = (float)y * 25 + 20;
-            idx++;
-        }
-    }
-
-    // Initialize building completion tracking
-    int completion_counts[CITY_BUILDINGS]; // How many lights filled per building
-    for (int i = 0; i < CITY_BUILDINGS; i++) {
-        completion_counts[i] = 0;
-    }
+    // BUILDING TEMPLATES AND COMPLEX LIGHTING LOGIC REMOVED - CLEANING UP VISUAL ARTIFACTS
 
     // Initialize star system - adjust count based on density setting
     int actual_star_count = (int)(STAR_COUNT * (0.3f + star_density * 0.7f)); // 225-750 stars
@@ -232,57 +253,7 @@ int main(int argc, char *argv[]) {
         meteors[i].life = 0;  // Start inactive
     }
 
-    // Initialize 50000 background stars DENSELY CONCENTRATED BEHIND BUILDINGS
-    background_stars = malloc(BACKGROUND_STAR_COUNT * sizeof(Star));
-
-    // Calculate how many stars per building for even distribution
-    int stars_per_building = BACKGROUND_STAR_COUNT / CITY_BUILDINGS;
-    int star_idx = 0;
-
-    for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-        // Calculate building position (use same logic as rendering)
-        float spacing = (float)screen_width / CITY_BUILDINGS;
-        float random_offset = (float)(rand() % (int)(spacing * 0.6f) - spacing * 0.3f);
-        float build_center_x = build_idx * spacing + random_offset + 15;
-        float build_width = 12 + rand() % 20; // Same size calculation
-        float build_height = 120.0f + (float)(rand() % 150);
-        float build_bottom_y = 50.0f;
-
-        // Create densely clustered stars behind this building
-        for (int j = 0; j < stars_per_building && star_idx < BACKGROUND_STAR_COUNT; j++) {
-            Star *star = &background_stars[star_idx];
-
-            // Cluster stars densely around the building area with some spread
-            star->x = build_center_x + build_width * 0.5f +  // Center on building
-                     (float)(rand() % (int)(build_width * 2.0f) - build_width); // Spread across building width
-
-            star->y = build_bottom_y + build_height * (float)rand() / RAND_MAX; // Distribute height behind building
-            // Add some stars above and below the building for halo effect
-            if (rand() % 3 == 0) { // 33% of stars above building
-                star->y += (float)(rand() % 100 - 50); // +/- 50 pixels
-            } else if (rand() % 3 == 1) { // 33% below building
-                star->y = build_bottom_y - 20 - (float)(rand() % 50); // Below building base
-            } // 33% within building height range (already set)
-
-            // 300% FASTER motion - make them equally slower
-            star->vx = (float)(rand() % 10 - 5) / 600.0f; // 3x slower horizontal drift
-            star->vy = (float)(rand() % 10 - 5) / 600.0f; // 3x slower vertical drift
-
-            // DIMMER for background depth effect - much less visible
-            star->base_brightness = 0.05f + (float)(rand() % 25) / 100.0f; // 0.05-0.30 range (much dimmer)
-            star->brightness = star->base_brightness;
-
-            // 300% SLOWER TWINKLING (3x slower by dividing speeds by 3)
-            star->twinkle_phase = (float)(rand() % 628) / 100.0f;
-            star->twinkle_speed = (0.1f + (float)(rand() % 50) / 100.0f) / 3.0f; // Very slow 1/3 speed twinkling
-
-            star->size = 0.3f + (float)(rand() % 10) / 10.0f; // Tinier 0.3-1.3 pixels
-            star->is_bright = false; // Background stars never glow
-            star->settled = false;
-
-            star_idx++;
-        }
-    }
+    // OLD BACKGROUND STAR SYSTEM REMOVED - Replaced with gap stars that fill spaces between buildings
 
     Uint64 last_time = SDL_GetTicks64();
     float meteor_timer = 0;
@@ -311,8 +282,9 @@ int main(int argc, char *argv[]) {
         float dt = (float)(current_time - last_time) / 1000.0f;
         last_time = current_time;
 
-        // Update stars
+        // Update sky stars and gap stars
         update_stars(stars, actual_star_count, dt * speed_mult, screen_width, screen_height);
+        update_stars(gap_stars, GAP_STAR_COUNT, dt * speed_mult, screen_width, screen_height);
 
         // Update and handle meteors - much more frequent for visibility
         meteor_timer += dt * speed_mult;
@@ -337,19 +309,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Gradually fill buildings with lights over time
-        static float building_fill_timer = 0;
-        building_fill_timer += dt * speed_mult;
-
-        if (building_fill_timer >= 0.5f) { // Every 0.5 seconds
-            building_fill_timer -= 0.5f;
-
-            // Add a light to one random building (if not full)
-            int build_idx = rand() % CITY_BUILDINGS;
-            if (completion_counts[build_idx] < building_point_counts[build_idx]) {
-                completion_counts[build_idx]++; // Add one more light to this building
-            }
-        }
+        // BUILDING LIGHT FILLING SYSTEM REMOVED - No more gradual light increases
         // Render scene - DISABLE all clearing to eliminate ANY possible fade effects
         // glClear(GL_COLOR_BUFFER_BIT);
 
@@ -375,20 +335,13 @@ int main(int argc, char *argv[]) {
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
         // Draw building masks to stencil buffer (invisible on screen)
-        // Note: buildings are now skinnier and have variable sizes
+        // NOTE: Now using PRE-CALCULATED STATIC building properties (no flicker!)
         for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-            // Variable building positions and sizes
-            float spacing = (float)screen_width / CITY_BUILDINGS;
-            float random_offset = (float)(rand() % (int)(spacing * 0.6f) - spacing * 0.3f);
-            float build_x_start = (float)build_idx * spacing + random_offset + 15;
-
-            // Skinnier buildings with variable widths
-            float base_width = (float)(12 + rand() % 20); // 12-32 pixels wide
-            float build_width = base_width;
-
-            // Variable heights
-            float build_height = 120.0f + (float)(rand() % 150); // 120-270 pixels tall
-            float build_y_start = 50.0f; // From bottom
+            Building *building = &buildings[build_idx];
+            float build_x_start = building->x;
+            float build_y_start = building->y;
+            float build_width = building->width;
+            float build_height = building->height;
 
             glBegin(GL_QUADS);
             glVertex2f(build_x_start, build_y_start);
@@ -403,38 +356,23 @@ int main(int argc, char *argv[]) {
         glStencilFunc(GL_EQUAL, 0, 0xFF);  // Only render where stencil is 0
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-        // STARS COMPLETELY DISABLED - no star rendering at all
-        // render_stars(stars, actual_star_count, screen_width, screen_height);
+        // Render sky stars (buildings static, stars work normally)
+        render_stars(stars, actual_star_count, screen_width, screen_height);
 
-        // ALL STARS COMPLETELY DISABLED - no star rendering of any kind
-        // RENDER BACKGROUND STARS BEHIND BUILDINGS ONLY (stencil=1 means building area)
-        // glEnable(GL_STENCIL_TEST);
-        // glStencilFunc(GL_EQUAL, 1, 0xFF);  // Only render where stencil is 1 (behind buildings)
-        // glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+        // RENDER GAP STARS BETWEEN BUILDINGS - NO STENCIL NEEDED, they are in open areas
+        render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);
 
-        // Update and render background stars
-        // update_stars(background_stars, BACKGROUND_STAR_COUNT, dt * speed_mult * 0.1f,
-        //              screen_width, screen_height); // Much slower movement
-        // render_stars(background_stars, BACKGROUND_STAR_COUNT, screen_width, screen_height);
-
-        // Disable stencil test temporarily for meteors and windows
-        glDisable(GL_STENCIL_TEST);
+        // No stencil operations needed for gap stars - they render in open spaces
 
         // MAKE BUILDINGS VISIBLE - render them on top of stars
+        // NOW BACK TO YELLOW BUILDINGS AS REQUESTED
         glColor3f(1.0f, 0.756f, 0.027f); // Mustard yellow buildings (RGB: 255, 193, 7)
         for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-            // Variable building positions and sizes
-            float spacing = (float)screen_width / CITY_BUILDINGS;
-            float random_offset = (float)(rand() % (int)(spacing * 0.6f) - spacing * 0.3f);
-            float build_x_start = (float)build_idx * spacing + random_offset + 15;
-
-            // Skinnier buildings with variable widths
-            float base_width = (float)(12 + rand() % 20); // 12-32 pixels wide
-            float build_width = base_width;
-
-            // Variable heights
-            float build_height = 120.0f + (float)(rand() % 150); // 120-270 pixels tall
-            float build_y_start = 50.0f; // From bottom
+            Building *building = &buildings[build_idx];
+            float build_x_start = building->x;
+            float build_y_start = building->y;
+            float build_width = building->width;
+            float build_height = building->height;
 
             glBegin(GL_QUADS);
             glVertex2f(build_x_start, build_y_start);
@@ -525,8 +463,6 @@ void init_stars(Star *stars, int count, int screen_width, int screen_height) {
 
     // Some stars are extra bright
     stars[i].is_bright = (rand() % 100) < 15; // 15% are bright
-    stars[i].settled = false; // Start as unsettled
-    stars[i].settled_layer = 0; // Will be set when settled
     }
 }
 
@@ -537,22 +473,17 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
     for (int i = 0; i < count; i++) {
         Star *s = &stars[i];
 
-        if (!s->settled) {
-            // Update position with gentle drift
-            s->x += s->vx * dt;
-            s->y += s->vy * dt;
+        // Update position with gentle drift (no settling behavior anymore)
+        s->x += s->vx * dt;
+        s->y += s->vy * dt;
 
-            // Wrap horizontally only
-            if (s->x < 0) s->x = screen_width;
-            if (s->x > screen_width) s->x = 0;
+        // Wrap horizontally only
+        if (s->x < 0) s->x = screen_width;
+        if (s->x > screen_width) s->x = 0;
 
-            // REMOVE: No settling behavior - just continuous blinking stars
-        }
-
-        // Settled stars don't wrap vertically, they stay in skyline
-        if (s->settled && s->y > screen_height - 20) s->y = screen_height - 20;
-        if (!s->settled && s->y < 20) s->y = screen_height - 20; // Avoid bottom area for floating stars
-        if (!s->settled && s->y > screen_height - 20) s->y = 20;
+        // All stars stay within bounds vertically
+        if (s->y < 20) s->y = screen_height - 20; // Avoid bottom area for floating stars
+        if (s->y > screen_height - 20) s->y = 20;
 
         // Update twinkling brightness with sine wave
         float twinkle_offset = sinf(time * s->twinkle_speed + s->twinkle_phase) * 0.4f;
@@ -561,16 +492,10 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
         // Clamp brightness
         if (s->brightness < 0.2f) s->brightness = 0.2f;
         if (s->brightness > 1.0f) s->brightness = 1.0f;
-
-        // Settled stars (city lights) have slightly yellow tint
-        if (s->settled) {
-            s->brightness = s->base_brightness + sinf(time * 2.0f + s->twinkle_phase) * 0.2f; // Different twinkling
-            if (s->brightness < 0.7f) s->brightness = 0.7f;
-        }
     }
 }
 
-void render_stars(Star *stars, int count, int screen_width, int screen_height) {
+void render_stars(Star *stars, int count, int screen_width __attribute__((unused)), int screen_height __attribute__((unused))) {
     glBegin(GL_POINTS);
 
     for (int i = 0; i < count; i++) {
