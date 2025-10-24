@@ -76,6 +76,7 @@ typedef struct {
     float size;           // Star size in pixels
     bool is_bright;       // Extra-bright star status for glow effect
     int building_gap;     // Which building gap this star belongs to (-1 for sky)
+    float blink_cooldown; // Time until star can twinkle again (5-20 seconds)
 } Star;
 
 /**
@@ -881,6 +882,7 @@ int main(int argc, char *argv[]) {
         star->size = 0.8f + (float)(rand() % 15) / 10.0f; // Smaller 0.8-2.3 pixels
         star->is_bright = (rand() % 100) < 15; // 15% bright gap stars
         star->building_gap = -1; // Mark as gap star for rotation logic
+        star->blink_cooldown = 5.0f + ((float)rand() / RAND_MAX) * 15.0f; // 5-20 seconds initial blink interval
 
         star_idx++;
     }
@@ -1363,9 +1365,20 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
             if (s->y > screen_height - 20) s->y = 20;
         }
 
-        // Update twinkling brightness with sine wave - MADE 2X SLOWER
-        float twinkle_offset = sinf(time * (s->twinkle_speed * 0.5f) + s->twinkle_phase) * 0.4f; // Slower twinkling
-        s->brightness = s->base_brightness + twinkle_offset;
+        // RANDOM BLINK CONTROL: Only twinkle when cooldown expires
+        s->blink_cooldown -= dt; // Count down the blink interval
+
+        if (s->blink_cooldown <= 0.0f) {
+            // Time to start twinkling - reset blink timer to 5-20 seconds
+            s->blink_cooldown = 5.0f + ((float)rand() / RAND_MAX) * 15.0f; // Next blink interval
+
+            // Apply slow twinkling brightness with sine wave
+            float twinkle_offset = sinf(time * (s->twinkle_speed * 0.5f) + s->twinkle_phase) * 0.4f; // Slower twinkling
+            s->brightness = s->base_brightness + twinkle_offset;
+        } else {
+            // Blink cooldown active - maintain steady base brightness only
+            s->brightness = s->base_brightness; // No twinkling during cooldown
+        }
 
         // Clamp brightness
         if (s->brightness < 0.2f) s->brightness = 0.2f;
