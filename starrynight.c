@@ -1338,7 +1338,7 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
                 urban_structure->illumination_percentage = 1.0f;
                 urban_structure->illumination_pattern_type = 2; // 24/7 operational criticality
                 urban_structure->aircraft_warning_beacon_present = 1; // Mandatory aviation safety
-                urban_structure->antenna_element_array = 1 + (rand() % 3); // Communication infrastructure
+                // REMOVED: urban_structure->antenna_element_array = 1 + (rand() % 3); - antennas controlled by global system
                 break;
 
             case 3: // HOSPITAL MEDICAL FACILITY (8-20 Stories, Emergency Illumination)
@@ -1419,29 +1419,12 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
                 break;
         }
 
-        // ADVANCED URBAN FEATURE ALLOCATION - Roof Infrastructure Synthesis
-        int feature_probability_roll = rand() % 100;
+        // OLD PROBABILITY SYSTEM REMOVED - Replaced with ultra-sparse controlled infrastructure assignment
+        // All rooftop features now explicitly managed via global infrastructure placement system above
 
-        // Probability-driven roof feature assignment
-        if (feature_probability_roll < 25) {
-            // Commercial/residential water tower (25% probability)
-            urban_structure->water_storage_capacity = 500000 + (rand() % 1500000); // 500K-2M gallon capacity
-            urban_structure->roof_feature_mask |= (1 << ROOF_RESERVOIR_TOWER);
-        } else if (feature_probability_roll < 40) {
-            // Broadcasting antenna array (15% probability)
-            urban_structure->antenna_element_array = 1 + (rand() % 5);
-            urban_structure->roof_feature_mask |= (1 << ROOF_TRANSMISSION_TOWER);
-
-            // Tower dimensions - fixed for consistent rendering (not recalculated per frame)
-            urban_structure->tower_height_pixels = 35 + (rand() % 25); // 35-60 pixel range
-            urban_structure->antenna_system_layout = rand() % 3; // 0,1,2 layout configurations
-        } else if (feature_probability_roll < 50) {
-            // Helicopter landing platform (10% probability, hospitals/offices)
-            urban_structure->roof_feature_mask |= (1 << ROOF_AERIAL_PLATFORM);
-        }
-
-        // Specialist building features for high-rise structures
-        if (urban_structure->floor_quantity >= 40) {
+        // Specialist building features for high-rise structures ( maintenace crane as backup only)
+        if (urban_structure->floor_quantity >= 40 && !(urban_structure->roof_feature_mask)) {
+            // Only buildings without other infrastructure get the maintenance crane as backup
             urban_structure->roof_feature_mask |= (1 << ROOF_MAINTENANCE_CRANE);
         }
 
@@ -1485,29 +1468,28 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             placements_initialized = 1;
         }
 
-        // Check if this building is assigned to host any infrastructure item
+        // Check if this building is assigned to host exactly 2 antennas and 2 towers across entire screen
+        // Only these specific infrastructure items will be visible on rooftops
         for (int placement_idx = 0; placement_idx < 10; placement_idx++) {
             if (infrastructure_placements[placement_idx] == build_index) {
                 // This building hosts this infrastructure item
                 int feature_type = -1;
 
-                // Determine feature type: 0-1 antennas, 2-3 towers, etc.
-                if (placement_idx < 2) {
-                    feature_type = ROOF_HELIPAD_PLATFORM; // antennas
-                } else if (placement_idx < 4) {
-                    feature_type = ROOF_SOLAR_PANEL_ARRAY; // towers
-                } else if (placement_idx < 6) {
-                    feature_type = ROOF_HVAC_UNITS; // helipads
-                } else if (placement_idx < 8) {
-                    feature_type = ROOF_RELIGIOUS_SYMBOLS; // solar panels
-                } else if (placement_idx < 10) {
-                    feature_type = ROOF_SURVEILLANCE_BLIMP; // religious symbols
+                // ULTRA-SPARSE ASSIGNMENT: slots 0-1 = antennas, slots 2-3 = towers only
+                // All other rooftop features removed for minimal realism (3 and up unused)
+                if (placement_idx == 0 || placement_idx == 1) {
+                    feature_type = ROOF_TRANSMISSION_TOWER; // Antennas on towers
+                } else if (placement_idx == 2 || placement_idx == 3) {
+                    feature_type = ROOF_TRANSMISSION_TOWER; // Separate towers
                 } else {
-                    feature_type = ROOF_HVAC_UNITS; // blimps (fallback)
+                    // No features for slots 4-9 to maintain ultra-sparse appearance
+                    break;
                 }
 
                 if (feature_type != -1) {
                     urban_structure->roof_feature_mask |= (1 << feature_type);
+                    // Ensure single antenna per tower for exact 2-antennas-visible requirement
+                    urban_structure->antenna_element_array = 1;
                 }
                 // Each building gets at most one item, so we can break after finding
                 break;
