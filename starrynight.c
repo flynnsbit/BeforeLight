@@ -1363,8 +1363,8 @@ void update_stars(Star *stars, int count, float dt, int screen_width, int screen
             if (s->y > screen_height - 20) s->y = 20;
         }
 
-        // Update twinkling brightness with sine wave
-        float twinkle_offset = sinf(time * s->twinkle_speed + s->twinkle_phase) * 0.4f;
+        // Update twinkling brightness with sine wave - MADE 2X SLOWER
+        float twinkle_offset = sinf(time * (s->twinkle_speed * 0.5f) + s->twinkle_phase) * 0.4f; // Slower twinkling
         s->brightness = s->base_brightness + twinkle_offset;
 
         // Clamp brightness
