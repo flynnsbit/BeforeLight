@@ -27,7 +27,7 @@
 #define STAR_COUNT 500  // Space for drifting stars only
 #define METEOR_COUNT 10
 #define METEOR_PARTICLES 20
-#define CITY_BUILDINGS 6     // Number of solid buildings with windows
+#define CITY_BUILDINGS 13     // Number of solid buildings with windows
 
 float building_spacing; // Global building spacing
 
@@ -313,11 +313,20 @@ int main(int argc, char *argv[]) {
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
         // Draw building masks to stencil buffer (invisible on screen)
+        // Note: buildings are now skinnier and have variable sizes
         for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-            float build_x_start = (float)screen_width * build_idx / CITY_BUILDINGS + 30;
-            float build_width = ((float)screen_width / CITY_BUILDINGS) - 60;
-            float build_height = 150.0f + (float)(build_idx * 50);
-            float build_y_start = 50.0f;
+            // Variable building positions and sizes
+            float spacing = (float)screen_width / CITY_BUILDINGS;
+            float random_offset = (float)(rand() % (int)(spacing * 0.6f) - spacing * 0.3f);
+            float build_x_start = (float)build_idx * spacing + random_offset + 15;
+
+            // Skinnier buildings with variable widths
+            float base_width = (float)(12 + rand() % 20); // 12-32 pixels wide
+            float build_width = base_width;
+
+            // Variable heights
+            float build_height = 120.0f + (float)(rand() % 150); // 120-270 pixels tall
+            float build_y_start = 50.0f; // From bottom
 
             glBegin(GL_QUADS);
             glVertex2f(build_x_start, build_y_start);
@@ -346,16 +355,20 @@ int main(int argc, char *argv[]) {
         }
 
         // Render lit windows on TOP of building silhouettes
+        // Note: slower blinking (50% less frequent) and variable window sizes
         for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
-            float build_x_start = (float)screen_width * build_idx / CITY_BUILDINGS + 30;
-            float build_width = ((float)screen_width / CITY_BUILDINGS) - 60;
-            float build_height = 150.0f + (float)(build_idx * 50);
-            float build_y_start = 50.0f;
+            // Calculate actual building position to match stencil rendering
+            float spacing = (float)screen_width / CITY_BUILDINGS;
+            float random_offset = (float)(rand() % (int)(spacing * 0.6f) - spacing * 0.3f);
+            float build_x_start = (float)build_idx * spacing + random_offset + 15;
+            float base_width = (float)(12 + rand() % 20); // 12-32 pixels wide
+            float build_width = base_width;
+            float build_height = 120.0f + (float)(rand() % 150); // 120-270 pixels tall
+            float build_y_start = 50.0f; // From bottom
 
-            // Draw tiny lit windows
+            // Draw tiny lit windows (variable sizes: 2x2, 3x3, 4x4)
             int windows_per_row = (int)build_width / 8;
             int window_rows = (int)build_height / 12;
-            int window_offset = build_idx * 3; // Consistent offset per building
 
             for (int row = 0; row < window_rows; row++) {
                 for (int col = 0; col < windows_per_row; col++) {
@@ -364,19 +377,22 @@ int main(int argc, char *argv[]) {
 
                     int window_idx = (build_idx * 20) + (row * windows_per_row + col);
 
-                    // Random chance windows light up (5% chance per frame per window)
-                    bool is_lit = (rand() % 100 < 5);
+                    // SLOWER blinking (2.5% chance instead of 5% - half the frequency)
+                    bool is_lit = (rand() % 400 < 1); // Much rarer lighting
 
                     if (is_lit) {
+                        // Variable window sizes (2x2, 3x3, or 4x4)
+                        int window_size = 2 + (rand() % 3); // 2, 3, or 4 pixels
+
                         // Warm yellow apartment light
                         glColor4f(1.0f, 0.9f, 0.8f, 1.0f);
 
-                        // Small square window
+                        // Variable size square window
                         glBegin(GL_QUADS);
                         glVertex2f(window_x, window_y);
-                        glVertex2f(window_x + 3, window_y);
-                        glVertex2f(window_x + 3, window_y + 3);
-                        glVertex2f(window_x, window_y + 3);
+                        glVertex2f(window_x + window_size, window_y);
+                        glVertex2f(window_x + window_size, window_y + window_size);
+                        glVertex2f(window_x, window_y + window_size);
                         glEnd();
                     }
                 }
