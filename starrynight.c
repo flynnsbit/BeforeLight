@@ -1237,12 +1237,20 @@ int main(int argc, char *argv[]) {
 
 void usage(const char *prog) {
     fprintf(stderr, "Usage: %s [OPTIONS]\n", prog);
-    fprintf(stderr, "Starry Night Screensaver for Hyprland/Wayland\n\n");
-    fprintf(stderr, "OPTIONS:\n");
-    fprintf(stderr, "  -s F    Speed multiplier (default 1.0)\n");
-    fprintf(stderr, "  -d F    Star density 0.0-1.0 (default 0.5)\n");
-    fprintf(stderr, "  -m F    Meteor frequency multiplier (default 1.0)\n");
-    fprintf(stderr, "  -h      Show this help\n\n");
+    fprintf(stderr, "Starry Night Screensaver for Hyprland/Wayland v4.2 - CELESTIAL SPHERE\n\n");
+
+    fprintf(stderr, "★ CELESTIAL ROTATION SYSTEM ENABLED:\n");
+    fprintf(stderr, "  -r dynamic  Celestial sphere rotation (Default - Earth physics)\n");
+    fprintf(stderr, "  -r static   Legacy drifting star field\n");
+    fprintf(stderr, "  -r none     Complete celestial positioning (no rotation)\n\n");
+
+    fprintf(stderr, "GRAPHICS & ANIMATION:\n");
+    fprintf(stderr, "  -s F        Speed multiplier (default 1.0)\n");
+    fprintf(stderr, "  -d F        Star density 0.0-1.0 (default 0.5)\n");
+    fprintf(stderr, "  -m F        Meteor frequency multiplier (default 1.0)\n");
+    fprintf(stderr, "  -h          Show this help\n\n");
+
+    fprintf(stderr, "BUILD STATUS: Celestial Sphere v4.2 - Scientific Astronomical Simulation\n");
     fprintf(stderr, "Run with: SDL_VIDEODRIVER=wayland ./starrynight\n");
     fprintf(stderr, "Exit with ESC or mouse/keyboard input after 5s delay\n");
 }
