@@ -1222,23 +1222,22 @@ void render_stars(Star *stars, int count, int screen_width __attribute__((unused
 }
 
 void init_meteor(Meteor *meteor, int screen_width, int screen_height) {
-    // Random start position off-screen (left, right, or top) but above buildings
-    int start_side = rand() % 3; // 0=left, 1=right, 2=top
+    // Random start position within visible sky area, well above all buildings
+    // Maximum building height ~20% of screen + 50px base = ensure 30% safe margin
+    int min_sky_y = screen_height * 0.3f; // 30% down screen from top (well above tallest buildings)
 
-    if (start_side == 0) { // Left edge
-        meteor->x = -50;
-        meteor->y = 60 + (rand() % (screen_height / 2)); // Upper 2/3 above buildings (minimum Y=60)
-    } else if (start_side == 1) { // Right edge
-        meteor->x = screen_width + 50;
-        meteor->y = 60 + (rand() % (screen_height / 2)); // Upper 2/3 above buildings (minimum Y=60)
-    } else { // Top edge
-        meteor->x = rand() % screen_width;
-        meteor->y = screen_height + 50;
-    }
+    meteor->x = rand() % screen_width; // Anywhere across full screen width (0 to screen_width)
+    meteor->y = min_sky_y + rand() % (screen_height - min_sky_y); // From 30% height to top
 
-    // Diagonal downward-right movement
-    meteor->vx = 250 + rand() % 150; // 250-400 px/sec
-    meteor->vy = 100 + rand() % 100; // 100-200 px/sec
+    // Random direction and speed for natural-looking movement across sky
+    // Movement should generally be downward and horizontal for realistic meteor trajectories
+    float angle = (rand() % 314) / 100.0f; // Random angle 0-3.14 radians
+    float speed = 150 + rand() % 200; // 150-350 pixels/second
+
+    // Convert angle to velocity components, weighted toward diagonal movement
+    meteor->vx = cosf(angle) * speed;
+    meteor->vy = sinf(angle) * speed * 0.7f; // Slightly less vertical for more horizontal movement
+    meteor->vy += 50; // Add steady downward component for visibility
 
     meteor->life = 1.0f; // Full life
     meteor->active = true;
