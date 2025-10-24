@@ -1301,9 +1301,12 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
         urban_structure->building_type = architectural_classification;
 
         // BUILDING SPECIFICATION ENGINE - Feature-Driven Architectural Synthesis
-        // Enhanced for cityscape appearance with 20% screen height limits and wider buildings
-        // Maximum height = 20% of available screen space (screen_height-50)
-        float max_building_height = (screen_height - 50) * 0.2f;
+        // Enhanced for cityscape appearance with 20% screen height limits (±10% variability) and wider buildings
+        // Maximum height = 20% of available screen space (screen_height-50) with 10% variability
+        float base_height_cap = (screen_height - 50) * 0.2f;
+        float height_variability = base_height_cap * 0.1f; // ±10% range
+        float height_random_factor = (rand() % 201 - 100) / 100.0f; // -1.0 to +1.0
+        float max_building_height = base_height_cap + height_random_factor * height_variability;
 
         switch (architectural_classification) {
             case -1: // FORCE HEIGHT CAP ENFORCEMENT
@@ -1490,11 +1493,6 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
                     urban_structure->roof_feature_mask |= (1 << feature_type);
                     // Ensure single antenna per tower for exact 2-antennas-visible requirement
                     urban_structure->antenna_element_array = 1;
-                    // Add 10% height variability to tower heights (centered on 60px height)
-                    float base_height = 60.0f;
-                    float variability = 10.0f; // ±10% range = ±6 pixels
-                    float height_random = (rand() % 201 - 100) / 100.0f; // -1.0 to +1.0
-                    urban_structure->tower_height_pixels = (int)(base_height + height_random * variability);
                 }
                 // Each building gets at most one item, so we can break after finding
                 break;
