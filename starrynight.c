@@ -149,11 +149,6 @@ int main(int argc, char *argv[]) {
 
     Uint64 last_time = SDL_GetTicks64();
     float meteor_timer = 0;
-    float elapsed = 0;
-
-    // Variables for idle detection
-    Uint32 last_input_time = SDL_GetTicks();
-    bool input_detected = false;
 
     // Main animation loop
     SDL_Event event;
@@ -170,7 +165,6 @@ int main(int argc, char *argv[]) {
                     running = false;
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                case SDL_MOUSEMOTION:
                     running = false;
                     break;
             }
@@ -179,8 +173,6 @@ int main(int argc, char *argv[]) {
         Uint64 current_time = SDL_GetTicks64();
         float dt = (float)(current_time - last_time) / 1000.0f;
         last_time = current_time;
-
-        elapsed += dt;
 
         // Update stars
         update_stars(stars, actual_star_count, dt * speed_mult, screen_width, screen_height);
