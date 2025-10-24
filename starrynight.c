@@ -30,8 +30,8 @@
 #define METEOR_PARTICLES 20
 #define CITY_BUILDINGS 13     // Number of solid buildings with windows
 
-// ADVANCED URBAN SYSTEM DEFINES (Chunk 1 Implementation)
-#define MAX_URBAN_BUILDINGS 13
+// ADVANCED URBAN SYSTEM DEFINES - Dynamic Building System for Dense Cityscape
+#define MAX_URBAN_BUILDINGS 100  // Increased capacity for dense city skyline coverage
 #define LIGHTING_SYSTEM_LIMIT 300
 #define ROOF_FEATURE_ARRAYS 15
 
@@ -41,6 +41,13 @@
 #define ROOF_AERIAL_PLATFORM   2
 #define ROOF_MAINTENANCE_CRANE 3
 #define ROOF_VENTILATIONS      4
+
+// CHUNK 6: ADDITIONAL ARCHITECTURAL ROOF FEATURES
+#define ROOF_HELIPAD_PLATFORM  5
+#define ROOF_SOLAR_PANEL_ARRAY 6
+#define ROOF_HVAC_UNITS       7
+#define ROOF_RELIGIOUS_SYMBOLS 8
+#define ROOF_SURVEILLANCE_BLIMP 9
 
 // AIRCRAFT WARNING BEACON SPECIFICATIONS (CHUNK 2 Implementation)
 #define AIRCRAFT_BEACON_DIAMETER     7.0f    // 5-10 pixel diameter, using 7
@@ -211,6 +218,246 @@ void render_aircraft_warning_beacons(int screen_width __attribute__((unused)), i
 void render_communication_tower_systems(int screen_width __attribute__((unused)), int screen_height __attribute__((unused)));
 
 /**
+ * ILLUMINATED WINDOW GRID ALGORITHMS (Chunk 5 Implementation)
+ * Renders intelligent building occupancy visualization with time-sensitive patterns
+ */
+void render_illuminated_window_grids(int screen_width __attribute__((unused)), int screen_height __attribute__((unused)));
+
+void initialize_window_illumination_patterns(void);
+
+/**
+ * ROOF ARCHITECTURAL ACCESSORY COMPLEXITY (Chunk 6 Implementation)
+ * Renders sophisticated rooftop architectural features like helipads, solar panels, and cranes
+ */
+void render_roof_architectural_accessory_complexity(int screen_width __attribute__((unused)), int screen_height __attribute__((unused))) {
+    static float global_hvac_timer = 0.0f; // Smooth accumulated timing for HVAC fan rotation
+    global_hvac_timer += 0.016f; // ~60 FPS increment for consistent timing
+
+    for (int building_index = 0; building_index < MAX_URBAN_BUILDINGS; building_index++) {
+        UrbanBuilding* structure = &urban_complex[building_index];
+
+        // HELIPAD PLATFORMS - Circular helicopter landing platforms
+        if (structure->roof_feature_mask & (1 << ROOF_HELIPAD_PLATFORM)) {
+            glColor4f(0.8f, 0.8f, 0.8f, 0.9f); // Light gray landing surface
+
+            // HELIPAD CIRCLE - 15-pixel radius circular landing area
+            float helipad_center_x = structure->x + structure->width / 2.0f;
+            float helipad_center_y = structure->roof_level_elevation + 8.0f;
+            float helipad_radius = 15.0f;
+
+            // Filled circle using triangle fan approximation
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex2f(helipad_center_x, helipad_center_y); // Center point
+            for (int i = 0; i <= 16; i++) {
+                float angle = (float)i * PI / 8.0f; // 16 segments for smooth circle
+                glVertex2f(helipad_center_x + cosf(angle) * helipad_radius,
+                          helipad_center_y + sinf(angle) * helipad_radius);
+            }
+            glEnd();
+
+            // HELIPAD CENTER H MARKING - FAA-required H symbol
+            glColor4f(1.0f, 1.0f, 1.0f, 0.8f); // White H marking
+            glLineWidth(2.0f);
+
+            glBegin(GL_LINES);
+            // Horizontal H spine
+            glVertex2f(helipad_center_x - 8.0f, helipad_center_y);
+            glVertex2f(helipad_center_x + 8.0f, helipad_center_y);
+
+            // Left H leg
+            glVertex2f(helipad_center_x - 8.0f, helipad_center_y - 6.0f);
+            glVertex2f(helipad_center_x - 8.0f, helipad_center_y + 6.0f);
+
+            // Right H leg
+            glVertex2f(helipad_center_x + 8.0f, helipad_center_y - 6.0f);
+            glVertex2f(helipad_center_x + 8.0f, helipad_center_y + 6.0f);
+            glEnd();
+        }
+
+        // SOLAR PANEL ARRAYS - Photovoltaic energy collection systems
+        if (structure->roof_feature_mask & (1 << ROOF_SOLAR_PANEL_ARRAY)) {
+            glColor4f(0.2f, 0.2f, 0.4f, 0.9f); // Dark blue solar panels
+
+            // SOLAR PANEL GRID - Arranged in 2x3 formation near building edge
+            float panel_start_x = structure->x + 5.0f;
+            float panel_y = structure->roof_level_elevation + 1.0f;
+            float panel_width = 8.0f;
+            float panel_height = 12.0f;
+            float panel_spacing_x = 2.0f;
+            float panel_spacing_y = 3.0f;
+
+            for (int row = 0; row < 2; row++) {
+                for (int col = 0; col < 3; col++) {
+                    float panel_x = panel_start_x + col * (panel_width + panel_spacing_x);
+                    float current_panel_y = panel_y + row * (panel_height + panel_spacing_y);
+
+                    // Individual solar panel rectangle
+                    glBegin(GL_QUADS);
+                    glVertex2f(panel_x, current_panel_y);
+                    glVertex2f(panel_x + panel_width, current_panel_y);
+                    glVertex2f(panel_x + panel_width, current_panel_y + panel_height);
+                    glVertex2f(panel_x, current_panel_y + panel_height);
+                    glEnd();
+                }
+            }
+
+            // REFLECTIVE GLAZE HIGHLIGHTS - Shiny panel appearance
+            glColor4f(0.6f, 0.7f, 0.9f, 0.6f); // Light blue reflection
+            glLineWidth(1.0f);
+
+            glBegin(GL_LINES);
+            // Diagonal reflection lines for realism
+            for (int row = 0; row < 2; row++) {
+                for (int col = 0; col < 3; col++) {
+                    float panel_x = panel_start_x + col * (panel_width + panel_spacing_x);
+                    float current_panel_y = panel_y + row * (panel_height + panel_spacing_y);
+                    glVertex2f(panel_x + 1.0f, current_panel_y + panel_height - 2.0f);
+                    glVertex2f(panel_x + panel_width - 3.0f, current_panel_y + 2.0f);
+                }
+            }
+            glEnd();
+        }
+
+        // HVAC VENTILATION UNITS - Cooling and ventilation equipment
+        if (structure->roof_feature_mask & (1 << ROOF_HVAC_UNITS)) {
+            // HVAC UNIT BODY - Rectangular mechanical equipment
+            glColor4f(0.3f, 0.3f, 0.4f, 0.95f); // Dark metallic blue-gray
+            float hvac_x = structure->x + structure->width - 15.0f;
+            float hvac_y = structure->roof_level_elevation;
+            float hvac_width = 10.0f;
+            float hvac_height = 6.0f;
+
+            glBegin(GL_QUADS);
+            glVertex2f(hvac_x, hvac_y);
+            glVertex2f(hvac_x + hvac_width, hvac_y);
+            glVertex2f(hvac_x + hvac_width, hvac_y + hvac_height);
+            glVertex2f(hvac_x, hvac_y + hvac_height);
+            glEnd();
+
+            // HVAC FAN GRILLE - Circular ventilation openings
+            glColor4f(0.1f, 0.1f, 0.1f, 1.0f); // Black grille
+            float grille_center_x = hvac_x + hvac_width/2.0f;
+            float grille_center_y = hvac_y + hvac_height - 3.0f;
+            float grille_radius = 2.0f;
+
+            glBegin(GL_POINTS);
+            for (int i = 0; i < 8; i++) {
+                float grille_angle = (float)i * PI / 4.0f;
+                glVertex2f(grille_center_x + cosf(grille_angle) * grille_radius,
+                          grille_center_y + sinf(grille_angle) * grille_radius);
+            }
+            glEnd();
+
+            // ROTATING FAN BLADES - Animated mechanical movement
+            glColor4f(0.8f, 0.8f, 0.8f, 0.9f); // Light gray blades
+            float fan_rotation = global_hvac_timer * 360.0f * 0.5f; // 180°/second rotation
+
+            glBegin(GL_LINES);
+            for (int blade = 0; blade < 4; blade++) {
+                float blade_angle = (PI / 2.0f) * blade + (fan_rotation * PI / 180.0f);
+                glVertex2f(grille_center_x, grille_center_y);
+                glVertex2f(grille_center_x + cosf(blade_angle) * (grille_radius * 0.8f),
+                          grille_center_y + sinf(blade_angle) * (grille_radius * 0.8f));
+            }
+            glEnd();
+        }
+
+        // RELIGIOUS ARCHITECTURAL SYMBOLS - Crosses and symbolic forms
+        if (structure->roof_feature_mask & (1 << ROOF_RELIGIOUS_SYMBOLS)) {
+            glColor4f(0.9f, 0.85f, 0.5f, 1.0f); // Gold-colored cross
+
+            // CROSS SYMBOL - Vertical and horizontal beams
+            float cross_center_x = structure->x + structure->width - 8.0f;
+            float cross_center_y = structure->roof_level_elevation + 12.0f;
+            float cross_beam_length = 6.0f;
+            float cross_beam_thickness = 1.5f;
+
+            // Vertical cross beam
+            glBegin(GL_QUADS);
+            glVertex2f(cross_center_x - cross_beam_thickness/2.0f,
+                      cross_center_y - cross_beam_length * 0.6f);
+            glVertex2f(cross_center_x + cross_beam_thickness/2.0f,
+                      cross_center_y - cross_beam_length * 0.6f);
+            glVertex2f(cross_center_x + cross_beam_thickness/2.0f,
+                      cross_center_y + cross_beam_length * 0.6f);
+            glVertex2f(cross_center_x - cross_beam_thickness/2.0f,
+                      cross_center_y + cross_beam_length * 0.6f);
+            glEnd();
+
+            // Horizontal cross beam
+            glBegin(GL_QUADS);
+            glVertex2f(cross_center_x - cross_beam_length/2.0f,
+                      cross_center_y - cross_beam_thickness/2.0f);
+            glVertex2f(cross_center_x + cross_beam_length/2.0f,
+                      cross_center_y - cross_beam_thickness/2.0f);
+            glVertex2f(cross_center_x + cross_beam_length/2.0f,
+                      cross_center_y + cross_beam_thickness/2.0f);
+            glVertex2f(cross_center_x - cross_beam_length/2.0f,
+                      cross_center_y + cross_beam_thickness/2.0f);
+            glEnd();
+
+            // GLOW AURA - Sacred illumination effect
+            glColor4f(0.95f, 0.9f, 0.7f, 0.4f); // Soft golden glow
+            glPointSize(4.0f);
+            glBegin(GL_POINTS);
+            glVertex2f(cross_center_x, cross_center_y);
+            glEnd();
+        }
+
+        // SURVEILLANCE BLIMPS - Inflatable camera platforms with tether systems
+        if (structure->roof_feature_mask & (1 << ROOF_SURVEILLANCE_BLIMP)) {
+            // BLIMP TETHER LINE - Thin cable from building to blimp
+            glColor4f(0.3f, 0.3f, 0.3f, 0.8f); // Dark gray tether
+            glLineWidth(1.0f);
+
+            float tether_x = structure->x + structure->width / 2.0f;
+            float tether_roof_y = structure->roof_level_elevation;
+            float tether_blimp_y = structure->roof_level_elevation + 25.0f;
+
+            glBegin(GL_LINES);
+            glVertex2f(tether_x, tether_roof_y);
+            glVertex2f(tether_x, tether_blimp_y);
+            glEnd();
+
+            // BLIMP ENVELOPE - Elliptical surveillance platform
+            glColor4f(0.6f, 0.6f, 0.8f, 0.85f); // Light gray blimp envelope
+            float blimp_width = 15.0f;
+            float blimp_height = 8.0f;
+            float blimp_x = tether_x - blimp_width/2.0f;
+            float blimp_y = tether_blimp_y - blimp_height/2.0f;
+
+            glBegin(GL_QUADS);
+            glVertex2f(blimp_x, blimp_y);
+            glVertex2f(blimp_x + blimp_width, blimp_y);
+            glVertex2f(blimp_x + blimp_width, blimp_y + blimp_height);
+            glVertex2f(blimp_x, blimp_y + blimp_height);
+            glEnd();
+
+            // SURVEILLANCE CAMERA - Equipment mounted on blimp
+            glColor4f(0.2f, 0.2f, 0.2f, 0.95f); // Black camera housing
+            glPointSize(2.0f);
+            glBegin(GL_POINTS);
+            glVertex2f(tether_x, tether_blimp_y);
+            glEnd();
+
+            // CAMERA LENS REFLECTION
+            glColor4f(1.0f, 1.0f, 0.8f, 0.8f); // Bright lens flare
+            glPointSize(1.0f);
+            glBegin(GL_POINTS);
+            glVertex2f(tether_x - 1.0f, tether_blimp_y + 0.5f);
+            glEnd();
+        }
+
+        // CONSTRUCTION CRANES - Boom arms with counterweights (already implemented in earlier chunks)
+        // CRANES ARE ALREADY RENDERED IN render_aircraft_warning_beacons() function
+    }
+
+    // RESET RENDER STATE - Restore defaults for subsequent rendering layers
+    glLineWidth(1.0f); // Reset line width
+    glPointSize(1.0f); // Reset point size
+}
+
+/**
  * WATER TOWER FACILITY INSTALLATIONS (Chunk 4 Implementation)
  * Renders elevated water reservoir towers with pulsing caution lighting
  */
@@ -341,6 +588,118 @@ void render_water_tower_facility_installations(int screen_width __attribute__((u
     // RESET RENDER STATE - Restore defaults for subsequent rendering
     glLineWidth(1.0f); // Reset line width
     glPointSize(1.0f); // Reset point size
+}
+
+/**
+ * ILLUMINATED WINDOW GRID ALGORITHMS - Initialize window illumination patterns
+ * Sets up realistic occupancy patterns based on building types and floor structures
+ */
+void initialize_window_illumination_patterns(void) {
+    for (int build_index = 0; build_index < MAX_URBAN_BUILDINGS; build_index++) {
+        UrbanBuilding* structure = &urban_complex[build_index];
+
+        // CALCULATE WINDOW GRID DIMENSIONS based on building properties
+        int floors = structure->floor_quantity;
+        int windows_per_floor = (structure->window_count_horizontal > 0) ?
+            structure->window_count_horizontal : 3; // Default fallback
+
+        // Ensure grid doesn't exceed maximum dimensions
+        floors = (floors > MAX_WINDOW_GRID_HEIGHT) ? MAX_WINDOW_GRID_HEIGHT : floors;
+        windows_per_floor = (windows_per_floor > MAX_WINDOW_GRID_WIDTH) ?
+            MAX_WINDOW_GRID_WIDTH : windows_per_floor;
+
+        // INITIALIZE ILLUMINATION GRID - Nighttime occupancy defaults
+        float base_occupancy = structure->illumination_percentage;
+        float illumination_level = 0.0f; // Start at 0 for daytime/low-activity simulation
+
+        for (int floor = 0; floor < floors; floor++) {
+            for (int window_x = 0; window_x < windows_per_floor; window_x++) {
+                // CLEAR GRID - Start with all windows dark
+                structure->window_grid[floor][window_x] = 0;
+
+                // BUILDING-TYPE SPECIFIC ILLUMINATION PATTERNS
+                float illumination_probability = base_occupancy;
+
+                // FLOOR-BASED VARIATION - Lower floors more occupied in residential
+                if (structure->illumination_pattern_type <= 1) { // Residential/Apartment
+                    float floor_factor = 1.0f - (float)floor / (float)floors * 0.3f; // Bottom floors busier
+                    illumination_probability *= floor_factor;
+                } else if (structure->illumination_pattern_type >= 5) { // Commercial/Late-night
+                    float floor_factor = 1.0f - (float)floor / (float)floors * 0.1f; // More uniform
+                    illumination_probability *= floor_factor;
+                }
+
+                // RANDOM OCCUPANCY DETERMINATION
+                float occupancy_roll = (float)rand() / RAND_MAX;
+                if (occupancy_roll < illumination_probability) {
+                    structure->window_grid[floor][window_x] = 1; // Illuminated
+                    illumination_level += 1.0f / (floors * windows_per_floor); // Track total illumination
+                }
+            }
+        }
+
+        // STORE REAL-TIME ILLUMINATION LEVEL for animation system
+        structure->current_illumination_level = illumination_level;
+    }
+}
+
+/**
+ * ILLUMINATED WINDOW GRID ALGORITHMS (Chunk 5 Implementation)
+ * Renders intelligent building occupancy visualization with time-sensitive patterns
+ */
+void render_illuminated_window_grids(int screen_width __attribute__((unused)), int screen_height __attribute__((unused))) {
+    for (int build_index = 0; build_index < MAX_URBAN_BUILDINGS; build_index++) {
+        UrbanBuilding* structure = &urban_complex[build_index];
+
+        // BUILDING DIMENSIONS - Use established building parameters
+        float building_x = structure->x;
+        float building_y = structure->y;
+        float building_width = structure->width;
+        float building_height = structure->height;
+
+        // WINDOW GRID CALCULATION
+        int floors = structure->floor_quantity;
+        int windows_per_floor = (structure->window_count_horizontal > 0) ?
+            structure->window_count_horizontal : 3;
+
+        // CONSTRAIN TO SAFE BOUNDARIES
+        floors = (floors > MAX_WINDOW_GRID_HEIGHT) ? MAX_WINDOW_GRID_HEIGHT : floors;
+        windows_per_floor = (windows_per_floor > MAX_WINDOW_GRID_WIDTH) ?
+            MAX_WINDOW_GRID_WIDTH : windows_per_floor;
+
+        // WINDOW DIMENSIONS AND SPACING
+        float available_width = building_width - (WINDOW_GRID_SAFE_MARGIN * 2.0f);
+        float window_width = available_width / windows_per_floor;
+        float floor_height = building_height / floors;
+        float window_height = floor_height * 0.7f; // Windows occupy 70% of floor height
+        float window_spacing_y = floor_height * 0.15f; // Vertical spacing between floors
+
+        // ILLUMINATED WINDOW RENDERING
+        glColor4f(0.95f, 0.9f, 0.6f, 0.9f); // Warm interior light (slightly yellow)
+
+        glBegin(GL_QUADS);
+        for (int floor = 0; floor < floors; floor++) {
+            for (int window_x = 0; window_x < windows_per_floor; window_x++) {
+                // CHECK WINDOW ILLUMINATION STATUS
+                if (structure->window_grid[floor][window_x] == 0) {
+                    continue; // Window is dark
+                }
+
+                // WINDOW POSITION CALCULATION
+                float window_left = building_x + WINDOW_GRID_SAFE_MARGIN + window_x * window_width;
+                float window_bottom = building_y + WINDOW_GRID_SAFE_MARGIN + floor * floor_height + window_spacing_y;
+                float window_right = window_left + window_width * 0.8f; // 80% of allocated width
+                float window_top = window_bottom + window_height;
+
+                // RENDER ILLUMINATED WINDOW RECTANGLE
+                glVertex2f(window_left, window_bottom);
+                glVertex2f(window_right, window_bottom);
+                glVertex2f(window_right, window_top);
+                glVertex2f(window_left, window_top);
+            }
+        }
+        glEnd();
+    }
 }
 
 // Main function
@@ -674,7 +1033,13 @@ int main(int argc, char *argv[]) {
         // Render elevated water reservoir towers with pulsing caution lighting
         render_water_tower_facility_installations(screen_width, screen_height);
 
-        // NO WINDOW RENDERING AT ALL - removed entire window rendering system
+        // CHUNK 6: ROOF ARCHITECTURAL ACCESSORY COMPLEXITY - Advanced rooftop features
+        // Render sophisticated rooftop architectural features like helipads, solar panels, and HVAC
+        render_roof_architectural_accessory_complexity(screen_width, screen_height);
+
+        // CHUNK 5: ILLUMINATED WINDOW GRID ALGORITHMS - Building Occupancy Visualization
+        // Render intelligent building occupancy visualization with time-sensitive patterns
+        render_illuminated_window_grids(screen_width, screen_height);
 
         // Swap buffers
         SDL_GL_SwapWindow(window);
@@ -889,12 +1254,16 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
     for (int build_index = 0; build_index < MAX_URBAN_BUILDINGS; build_index++) {
         UrbanBuilding* urban_structure = &urban_complex[build_index];
 
-        // SPATIAL POSITIONING - Advanced Urban Layout Algorithm
-        float urban_parcel_spacing = (float)screen_width / MAX_URBAN_BUILDINGS;
-        float architectural_offset_variance = (float)(rand() % (int)(urban_parcel_spacing * 0.6f) - urban_parcel_spacing * 0.3f);
+        // DENSE CITYSCAPE POSITIONING - Pack buildings tightly without gaps
+        // Calculate building position based on index - all buildings touch each other
+        if (build_index == 0) {
+            urban_structure->x = 5.0f; // Start 5 pixels from left edge
+        } else {
+            // Each building starts right after the previous one's end
+            UrbanBuilding* prev_structure = &urban_complex[build_index - 1];
+            urban_structure->x = prev_structure->x + prev_structure->width;
+        }
 
-        // Coordinate system establishment with architectural precision
-        urban_structure->x = (float)build_index * urban_parcel_spacing + architectural_offset_variance + 15;
         urban_structure->y = 50.0f; // Ground floor datum consistency
 
         // ARCHITECTURAL PROFILE DETERMINATION - 11 Building Archetype System
@@ -902,19 +1271,20 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
         urban_structure->building_type = architectural_classification;
 
         // BUILDING SPECIFICATION ENGINE - Feature-Driven Architectural Synthesis
+        // Enhanced for cityscape appearance with 20% height increase and wider buildings
         switch (architectural_classification) {
             case 0: // RESIDENTIAL APARTMENT COMPLEX (2-10 Stories, Balconies/Balconies Design)
                 urban_structure->floor_quantity = 2 + (rand() % 9);
-                urban_structure->height = urban_structure->floor_quantity * 20.0f;
-                urban_structure->width = 16.0f + (float)(rand() % 16);
+                urban_structure->height = urban_structure->floor_quantity * 20.0f * 1.2f; // 20% height increase
+                urban_structure->width = 20.0f + (float)(rand() % 30); // Wider range: 20-50 pixels
                 urban_structure->illumination_percentage = 0.7f;
                 urban_structure->illumination_pattern_type = 0; // Residential nighttime energy profile
                 break;
 
             case 1: // OFFICE FINANCIAL CENTER (15-35 Stories, Glass Curtain Architecture)
                 urban_structure->floor_quantity = 15 + (rand() % 21);
-                urban_structure->height = urban_structure->floor_quantity * 18.0f;
-                urban_structure->width = 20.0f + (float)(rand() % 25);
+                urban_structure->height = urban_structure->floor_quantity * 18.0f * 1.2f; // 20% height increase
+                urban_structure->width = 28.0f + (float)(rand() % 35); // Wider range: 28-63 pixels
                 urban_structure->illumination_percentage = 0.9f;
                 urban_structure->illumination_pattern_type = 1; // Business hour diurnal cycle
                 // Prepare for aircraft beacon installation (Chunk 2)
@@ -923,8 +1293,8 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
 
             case 2: // MEGATOWER CONSTRUCTION (40-80 Stories, Supertall Architectural Monument)
                 urban_structure->floor_quantity = 40 + (rand() % 41);
-                urban_structure->height = urban_structure->floor_quantity * 16.5f;
-                urban_structure->width = 24.0f + (float)(rand() % 24);
+                urban_structure->height = urban_structure->floor_quantity * 16.5f * 1.2f; // 20% height increase
+                urban_structure->width = 30.0f + (float)(rand() % 40); // Wider range: 30-70 pixels
                 urban_structure->illumination_percentage = 1.0f;
                 urban_structure->illumination_pattern_type = 2; // 24/7 operational criticality
                 urban_structure->aircraft_warning_beacon_present = 1; // Mandatory aviation safety
@@ -933,8 +1303,8 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
 
             case 3: // HOSPITAL MEDICAL FACILITY (8-20 Stories, Emergency Illumination)
                 urban_structure->floor_quantity = 8 + (rand() % 13);
-                urban_structure->height = urban_structure->floor_quantity * 22.0f;
-                urban_structure->width = 18.0f + (float)(rand() % 20);
+                urban_structure->height = urban_structure->floor_quantity * 22.0f * 1.2f; // 20% height increase
+                urban_structure->width = 22.0f + (float)(rand() % 32); // Wider range: 22-54 pixels
                 urban_structure->illumination_percentage = 1.0f;
                 urban_structure->illumination_pattern_type = 3; // 24-hour medical operation
                 urban_structure->aircraft_warning_beacon_present = (urban_structure->floor_quantity >= 15);
@@ -942,8 +1312,8 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
 
             case 4: // EDUCATIONAL ACADEMIC INSTITUTE (6-15 Stories, Classroom Configuration)
                 urban_structure->floor_quantity = 6 + (rand() % 10);
-                urban_structure->height = urban_structure->floor_quantity * 19.0f;
-                urban_structure->width = 22.0f + (float)(rand() % 18);
+                urban_structure->height = urban_structure->floor_quantity * 19.0f * 1.2f; // 20% height increase
+                urban_structure->width = 26.0f + (float)(rand() % 28); // Wider range: 26-54 pixels
                 urban_structure->illumination_percentage = 0.6f;
                 urban_structure->illumination_pattern_type = 4; // Academic scheduling cycle
                 urban_structure->architectural_significance = 1.2f; // Cultural weighting factor
@@ -951,16 +1321,16 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
 
             case 5: // COMMERCIAL BUSINESS DISTRICT (10-25 Stories, Neon Advertising)
                 urban_structure->floor_quantity = 10 + (rand() % 16);
-                urban_structure->height = urban_structure->floor_quantity * 17.5f;
-                urban_structure->width = 19.0f + (float)(rand() % 21);
+                urban_structure->height = urban_structure->floor_quantity * 17.5f * 1.2f; // 20% height increase
+                urban_structure->width = 25.0f + (float)(rand() % 31); // Wider range: 25-56 pixels
                 urban_structure->illumination_percentage = 0.85f;
                 urban_structure->illumination_pattern_type = 5; // Late-night commercial economy
                 break;
 
             case 6: // INDUSTRIAL MANUFACTURING COMPLEX (3-8 Stories, Ventilation Systems)
                 urban_structure->floor_quantity = 3 + (rand() % 6);
-                urban_structure->height = urban_structure->floor_quantity * 25.0f;
-                urban_structure->width = 14.0f + (float)(rand() % 18);
+                urban_structure->height = urban_structure->floor_quantity * 25.0f * 1.2f; // 20% height increase
+                urban_structure->width = 18.0f + (float)(rand() % 28); // Wider range: 18-46 pixels
                 urban_structure->illumination_percentage = 0.8f;
                 urban_structure->illumination_pattern_type = 6; // First/third shift operational cycles
                 urban_structure->roof_feature_mask |= (1 << ROOF_VENTILATIONS); // Industrial specific
@@ -968,8 +1338,8 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
 
             case 7: // CULTURAL INSTITUTION VENUE (12-25 Stories, Performance Hall Architecture)
                 urban_structure->floor_quantity = 12 + (rand() % 14);
-                urban_structure->height = urban_structure->floor_quantity * 20.0f;
-                urban_structure->width = 21.0f + (float)(rand() % 19);
+                urban_structure->height = urban_structure->floor_quantity * 20.0f * 1.2f; // 20% height increase
+                urban_structure->width = 27.0f + (float)(rand() % 29); // Wider range: 27-56 pixels
                 urban_structure->illumination_percentage = 0.4f;
                 urban_structure->illumination_pattern_type = 7; // Event-based illumination patterns
                 urban_structure->architectural_significance = 1.5f; // Artistic importance multiplier
@@ -977,24 +1347,24 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
 
             case 8: // RESEARCH LABORATORY COMPLEX (8-18 Stories, Specialized Ventilation)
                 urban_structure->floor_quantity = 8 + (rand() % 11);
-                urban_structure->height = urban_structure->floor_quantity * 21.0f;
-                urban_structure->width = 20.0f + (float)(rand() % 20);
+                urban_structure->height = urban_structure->floor_quantity * 21.0f * 1.2f; // 20% height increase
+                urban_structure->width = 24.0f + (float)(rand() % 30); // Wider range: 24-54 pixels
                 urban_structure->illumination_percentage = 1.0f;
                 urban_structure->illumination_pattern_type = 8; // Continuous operational criticality
                 break;
 
             case 9: // RETAIL SHOPPING COMPLEX (2-6 Stories, Aluminum Framing)
                 urban_structure->floor_quantity = 2 + (rand() % 5);
-                urban_structure->height = urban_structure->floor_quantity * 28.0f;
-                urban_structure->width = 16.0f + (float)(rand() % 24);
+                urban_structure->height = urban_structure->floor_quantity * 28.0f * 1.2f; // 20% height increase
+                urban_structure->width = 20.0f + (float)(rand() % 36); // Wider range: 20-56 pixels
                 urban_structure->illumination_percentage = 0.75f;
                 urban_structure->illumination_pattern_type = 9; // Retail business hour cycle
                 break;
 
             case 10: // CONVENTION EVENT FACILITY (4-12 Stories, Exhibition Architecture)
                 urban_structure->floor_quantity = 4 + (rand() % 9);
-                urban_structure->height = urban_structure->floor_quantity * 23.0f;
-                urban_structure->width = 25.0f + (float)(rand() % 20);
+                urban_structure->height = urban_structure->floor_quantity * 23.0f * 1.2f; // 20% height increase
+                urban_structure->width = 29.0f + (float)(rand() % 30); // Wider range: 29-59 pixels
                 urban_structure->illumination_percentage = 0.3f;
                 urban_structure->illumination_pattern_type = 10; // Convention schedule coordination
                 urban_structure->architectural_significance = 1.3f; // Convention center importance
@@ -1027,6 +1397,24 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             urban_structure->roof_feature_mask |= (1 << ROOF_MAINTENANCE_CRANE);
         }
 
+        // CHUNK 6: ROOF ARCHITECTURAL ACCESSORY COMPLEXITY
+        // Probability-based assignment of sophisticated roof features (10-15% chance each)
+        if ((rand() % 100) < 12) { // 12% chance for helipads
+            urban_structure->roof_feature_mask |= (1 << ROOF_HELIPAD_PLATFORM);
+        }
+        if ((rand() % 100) < 10) { // 10% chance for solar panels
+            urban_structure->roof_feature_mask |= (1 << ROOF_SOLAR_PANEL_ARRAY);
+        }
+        if ((rand() % 100) < 13) { // 13% chance for HVAC units
+            urban_structure->roof_feature_mask |= (1 << ROOF_HVAC_UNITS);
+        }
+        if ((rand() % 100) < 8) { // 8% chance for religious symbols
+            urban_structure->roof_feature_mask |= (1 << ROOF_RELIGIOUS_SYMBOLS);
+        }
+        if ((rand() % 100) < 6) { // 6% chance for surveillance blimps
+            urban_structure->roof_feature_mask |= (1 << ROOF_SURVEILLANCE_BLIMP);
+        }
+
         // Boundary calculation and spatial validation
         urban_structure->right_edge = urban_structure->x + urban_structure->width;
         urban_structure->window_count_horizontal = 2 + (rand() % 6); // Windows per floor variation
@@ -1036,6 +1424,9 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
 
         // Advanced lighting preparation (coordination system for Chunks 2-10)
         urban_structure->pulse_synchronization_timer = (float)rand() / RAND_MAX * 2.0f * PI; // Randomized phase
+
+        // CHUNK 5: WINDOW GRID INITIALIZATION - Setup illuminated window patterns
+        initialize_window_illumination_patterns();
     }
 }
 
