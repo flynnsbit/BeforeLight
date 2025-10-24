@@ -1018,6 +1018,29 @@ int main(int argc, char *argv[]) {
         glStencilFunc(GL_EQUAL, 0, 0xFF);  // Only render where stencil is 0
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
+        // RENDER THIN WHITE BUILDING OUTLINES - Subtle edge definition for all structures
+        glColor4f(1.0f, 1.0f, 1.0f, 0.8f); // White, semi-transparent for subtle definition
+        glLineWidth(1.0f); // Thinnest possible line
+
+        for (int build_idx = 0; build_idx < CITY_BUILDINGS; build_idx++) {
+            Building *building = &buildings[build_idx];
+            float x1 = building->x;
+            float y1 = building->y;
+            float x2 = building->right_edge;
+            float y2 = building->y + building->height;
+
+            glBegin(GL_LINES);
+            // Top horizontal
+            glVertex2f(x1, y2); glVertex2f(x2, y2);
+            // Bottom horizontal
+            glVertex2f(x1, y1); glVertex2f(x2, y1);
+            // Left vertical
+            glVertex2f(x1, y1); glVertex2f(x1, y2);
+            // Right vertical
+            glVertex2f(x2, y1); glVertex2f(x2, y2);
+            glEnd();
+        }
+
         // Render sky stars (buildings static, stars work normally)
         render_stars(stars, actual_star_count, screen_width, screen_height);
 
