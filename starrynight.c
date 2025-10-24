@@ -812,7 +812,6 @@ int main(int argc, char *argv[]) {
 
     // Create smooth density gradient: dense at bottom → sparse at top (matching -d parameter)
     int star_idx = 0;
-    const int sampling_points = 1000; // Quality of distribution sampling
 
     for (int j = 0; j < GAP_STAR_COUNT; j++) {
         Star *star = &gap_stars[star_idx];
@@ -1365,7 +1364,7 @@ void initialize_urban_complex_generation(int screen_width __attribute__((unused)
             urban_structure->x = prev_structure->x + prev_structure->width;
         }
 
-        urban_structure->y = 50.0f; // Ground floor datum consistency
+        urban_structure->y = 0.0f; // Buildings start at screen bottom edge
 
         // ARCHITECTURAL PROFILE DETERMINATION - 11 Building Archetype System
         int architectural_classification = rand() % 11; // Sophisticated typology selection
