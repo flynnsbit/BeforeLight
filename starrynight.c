@@ -1075,7 +1075,7 @@ int main(int argc, char *argv[]) {
             // 🌌 DYNAMIC/CELESTIAL SPHERE MODE - Full astronomical simulation
             // Render astronomical star sphere with Earth rotation (sidereal ~23h56m)
             static float celestial_rotation_angle = 0.0f; // Tracks Earth's rotation
-            celestial_rotation_angle += dt * 0.00009f; // Very slow rotation for sidereal day
+            celestial_rotation_angle += dt * 0.000045f; // Half speed for better observation
 
             glPointSize(1.0f); // Ensure proper star point size
             glBegin(GL_POINTS);
