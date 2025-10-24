@@ -1445,28 +1445,60 @@ void initialize_urban_complex_generation(int screen_width, int screen_height __a
             urban_structure->roof_feature_mask |= (1 << ROOF_MAINTENANCE_CRANE);
         }
 
-        // CHUNK 6: ROOF ARCHITECTURAL ACCESSORY COMPLEXITY
-        // Limited selection: only 2 unique roof features per building maximum
-        // From 5 possible infrared features: helipads, solar panels, HVAC, religious symbols, surveillance blimps
-        int features_assigned = 0;
-        int feature_options[5] = {
-            ROOF_HELIPAD_PLATFORM, ROOF_SOLAR_PANEL_ARRAY, ROOF_HVAC_UNITS,
-            ROOF_RELIGIOUS_SYMBOLS, ROOF_SURVEILLANCE_BLIMP
-        };
+        // GLOBAL ROOFTOP INFRASTRUCTURE CONSTRAINT - Ultra-Limited Assignment
+        // Only 2 buildings maximum per infrastructure type across entire screen
+        // This creates sparse, realistic urban infrastructure distribution (10 buildings total with infrastructure)
 
-        // Shuffle available features randomly
-        for (int i = 4; i > 0; i--) {
-            int j = rand() % (i + 1);
-            int temp = feature_options[i];
-            feature_options[i] = feature_options[j];
-            feature_options[j] = temp;
+        // Global feature tracking arrays - static so they persist across building generation
+        static int building_assignments[MAX_URBAN_BUILDINGS]; // Track which buildings get what
+        static int assignments_initialized = 0;
+
+        // Initialize global assignments on first building generation
+        if (assignments_initialized == 0) {
+            // Reset assignments
+            for (int i = 0; i < MAX_URBAN_BUILDINGS; i++) {
+                building_assignments[i] = -1; // -1 = no assignment
+            }
+
+            // Assign exactly 2 buildings per feature type (total: 10 buildings with infrastructure)
+            for (int feature_idx = 0; feature_idx < 5; feature_idx++) {
+                for (int assignment = 0; assignment < 2; assignment++) {
+                    // Find an unassigned building randomly
+                    int building_attempts = 0;
+                    while (building_attempts < MAX_URBAN_BUILDINGS) {
+                        int candidate_building = rand() % MAX_URBAN_BUILDINGS;
+
+                        // Skip if already assigned or if this building already has a different feature
+                        if (building_assignments[candidate_building] == -1) {
+                            building_assignments[candidate_building] = feature_idx;
+                            break;
+                        }
+
+                        building_attempts++;
+                    }
+                }
+            }
+
+            assignments_initialized = 1;
         }
 
-        // Assign only up to 2 unique features randomly
-        int features_to_assign = (rand() % 3); // 0, 1, or 2 features maximum
-        for (int i = 0; i < features_to_assign && features_assigned < 2; i++) {
-            urban_structure->roof_feature_mask |= (1 << feature_options[i]);
-            features_assigned++;
+        // Check if this specific building was pre-assigned a feature
+        if (building_assignments[build_index] != -1) {
+            int assigned_feature = building_assignments[build_index];
+            int feature_type = -1;
+
+            // Map assignment index to actual feature type
+            switch (assigned_feature) {
+                case 0: feature_type = ROOF_HELIPAD_PLATFORM; break;
+                case 1: feature_type = ROOF_SOLAR_PANEL_ARRAY; break;
+                case 2: feature_type = ROOF_HVAC_UNITS; break;
+                case 3: feature_type = ROOF_RELIGIOUS_SYMBOLS; break;
+                case 4: feature_type = ROOF_SURVEILLANCE_BLIMP; break;
+            }
+
+            if (feature_type != -1) {
+                urban_structure->roof_feature_mask |= (1 << feature_type);
+            }
         }
 
         // Boundary calculation and spatial validation
