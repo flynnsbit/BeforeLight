@@ -1,6 +1,6 @@
 /**
- * Star Clean - Minimal star field screensaver
- * Clean, focused implementation with individually twinkling stars
+ * Star Clean - Bright Static Star Field
+ * Clean, static implementation with maximum-brightness stars
  *
  * Compile: gcc -Wall -Wextra -O2 `sdl2-config --cflags` -o starsclean starsclean.c `sdl2-config --libs` -lGL -lm
  * Run: ./starsclean
@@ -28,8 +28,8 @@ typedef struct {
 } Star;
 
 /**
- * Initialize star system - create clean field of twinkling stars
- * Each star gets unique twinkling parameters for independent variation
+ * Initialize star system - create bright static stars
+ * All stars are placed and set to maximum brightness
  */
 void init_stars(Star *stars, int count, int screen_width, int screen_height) {
     for (int i = 0; i < count; i++) {
@@ -37,53 +37,27 @@ void init_stars(Star *stars, int count, int screen_width, int screen_height) {
         stars[i].x = rand() % screen_width;
         stars[i].y = rand() % screen_height;
 
-        // Velocity: gentle drifting movement
-        stars[i].vx = -0.1f - (float)(rand() % 4) / 10.0f; // Subtle leftward drift
-        stars[i].vy = (float)(rand() % 10 - 5) / 20.0f;    // Very slight vertical drift
+        // Velocity: not used for static stars
+        stars[i].vx = 0.0f;
+        stars[i].vy = 0.0f;
 
-        // Brightness range: smooth variation around baseline
-        stars[i].base_brightness = 0.5f + (float)(rand() % 5) / 10.0f; // 0.5-1.0
-        stars[i].brightness = stars[i].base_brightness;
-
-        // Twinkling parameters: individual patterns
-        stars[i].twinkle_phase = (float)(rand() % 628) / 100.0f; // Random 0-6.28 radians
-        stars[i].twinkle_speed = 0.5f + (float)(rand() % 150) / 100.0f; // 0.5-2.0 range
+        // Brightness: Maximum brightness for all stars
+        stars[i].brightness = 1.0f; // Full brightness (no twinkling)
 
         // Size variation (unused in current render)
-        stars[i].size = 1.0f + (float)(rand() % 20) / 10.0f; // 1.0-3.0 pixels
+        stars[i].size = 1.0f;
 
-        // Glow effect: 15% of stars get enhanced brightness
-        stars[i].is_bright = (rand() % 100) < 15;
+        // Glow effect: All stars get enhanced brightness and glow
+        stars[i].is_bright = 1;  // All stars get glow
     }
 }
 
 /**
- * Update star system - handle twinkling only (drift disabled)
- * Stars remain static but oscillate brightness individually
+ * Update star system - static bright stars (no updates needed)
  */
 void update_stars(Star *stars, int count, float dt, int screen_width, int screen_height) {
-    static float time = 0;
-    time += dt;
-
-    for (int i = 0; i < count; i++) {
-        (void)dt; (void)screen_width; (void)screen_height; // Suppress unused parameter warnings
-
-        // STATIONS DISABLED: Keep stars static at their initial positions
-        // stars[i].x += stars[i].vx * dt;
-        // if (stars[i].x < 0) stars[i].x = screen_width;
-        // if (stars[i].x > screen_width) stars[i].x = 0;
-        // if (stars[i].y < 20) stars[i].y = screen_height - 20;
-        // if (stars[i].y > screen_height - 20) stars[i].y = 20;
-
-        // Individual twinkling: sinusoidal oscillation around base brightness
-        // ±0.3f amplitude creates smooth, natural variation
-        float twinkle_offset = sinf(time * stars[i].twinkle_speed + stars[i].twinkle_phase) * 0.3f;
-        stars[i].brightness = stars[i].base_brightness + twinkle_offset;
-
-        // Clamp brightness to prevent over/underflow
-        if (stars[i].brightness < 0.2f) stars[i].brightness = 0.2f;
-        if (stars[i].brightness > 1.0f) stars[i].brightness = 1.0f;
-    }
+    (void)stars; (void)count; (void)dt; (void)screen_width; (void)screen_height; // Suppress warnings
+    // Stars are static and always bright - no updates required
 }
 
 /**
@@ -106,8 +80,8 @@ void render_stars(Star *stars, int count, int screen_width, int screen_height) {
             b = 0.85f;
         }
 
-        // Set color with individual star brightness
-        glColor4f(r, g, b, 1.0f);  // Full alpha - twinkling controlled by brightness
+        // Set color with individual star brightness - modulate color by brightness
+        glColor4f(r * stars[i].brightness, g * stars[i].brightness, b * stars[i].brightness, 1.0f);
 
         // Draw main star point
         glVertex2f(stars[i].x, stars[i].y);
