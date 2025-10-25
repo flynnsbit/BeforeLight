@@ -58,25 +58,22 @@ void init_stars(Star *stars, int count, int screen_width, int screen_height) {
 }
 
 /**
- * Update star system - handle movement and twinkling
- * Stars move according to velocity and oscillate brightness individually
+ * Update star system - handle twinkling only (drift disabled)
+ * Stars remain static but oscillate brightness individually
  */
 void update_stars(Star *stars, int count, float dt, int screen_width, int screen_height) {
     static float time = 0;
     time += dt;
 
     for (int i = 0; i < count; i++) {
-        // Move according to velocity
-        stars[i].x += stars[i].vx * dt;
-        stars[i].y += stars[i].vy * dt;
+        (void)dt; (void)screen_width; (void)screen_height; // Suppress unused parameter warnings
 
-        // Wrap horizontally for continuous movement
-        if (stars[i].x < 0) stars[i].x = screen_width;
-        if (stars[i].x > screen_width) stars[i].x = 0;
-
-        // Keep within vertical bounds (with small margins)
-        if (stars[i].y < 20) stars[i].y = screen_height - 20;
-        if (stars[i].y > screen_height - 20) stars[i].y = 20;
+        // STATIONS DISABLED: Keep stars static at their initial positions
+        // stars[i].x += stars[i].vx * dt;
+        // if (stars[i].x < 0) stars[i].x = screen_width;
+        // if (stars[i].x > screen_width) stars[i].x = 0;
+        // if (stars[i].y < 20) stars[i].y = screen_height - 20;
+        // if (stars[i].y > screen_height - 20) stars[i].y = 20;
 
         // Individual twinkling: sinusoidal oscillation around base brightness
         // ±0.3f amplitude creates smooth, natural variation

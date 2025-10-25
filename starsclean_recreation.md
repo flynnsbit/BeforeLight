@@ -244,7 +244,7 @@ gcc -o starsclean starsclean.c -lSDL2 -lGL -lm
 - 1500 individual white/yellow stars
 - Full screen coverage (no empty areas)
 - Smooth independent twinkling for each star
-- Gentle drifting motion with screen wrapping
+- ~~Gentle drifting motion with screen wrapping~~ **DISABLED** - Stars remain static
 - ~15% of stars have enhanced glow effects
 - Black background for contrast
 
