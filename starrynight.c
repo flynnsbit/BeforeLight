@@ -827,9 +827,9 @@ int main(int argc, char *argv[]) {
 // LEGACY STATIC BUILDING PRECALCULATION REMOVED
 // All buildings now dynamically generated in urban_complex with proper urban planning
 
-    // CALCULATE CONTINUOUS STAR FIELD WITH SMOOTH DENSITY GRADIENT
-    // Reach target sky star density at the top, dense at bottom near buildings
-    gap_stars = malloc(GAP_STAR_COUNT * sizeof(Star));
+// CALCULATE CONTINUOUS STAR FIELD WITH SMOOTH DENSITY GRADIENT
+// Reach target sky star density at the top, dense at bottom near buildings
+// gap_stars = malloc(GAP_STAR_COUNT * sizeof(Star));  // DISABLED: gap stars disabled
 
     // Calculate target sky star density for gradient matching
     int target_sky_density = (int)(STAR_COUNT * (0.3f + star_density * 0.7f));
@@ -837,6 +837,7 @@ int main(int argc, char *argv[]) {
     // Create smooth density gradient: dense at bottom → sparse at top (matching -d parameter)
     int star_idx = 0;
 
+    /*
     for (int j = 0; j < GAP_STAR_COUNT; j++) {
         Star *star = &gap_stars[star_idx];
 
@@ -881,6 +882,7 @@ int main(int argc, char *argv[]) {
 
         star_idx++;
     }
+    */
 
     // Create fullscreen window using SDL_WINDOW_FULLSCREEN_DESKTOP for proper Hyprland integration
     SDL_Window *window = SDL_CreateWindow("Starry Night",
@@ -959,7 +961,7 @@ int main(int argc, char *argv[]) {
 
         // Update sky stars and gap stars
         update_stars(stars, actual_star_count, dt * speed_mult, screen_width, screen_height);
-        update_stars(gap_stars, GAP_STAR_COUNT, dt * speed_mult, screen_width, screen_height);
+        // update_stars(gap_stars, GAP_STAR_COUNT, dt * speed_mult, screen_width, screen_height);  // DISABLED: gap stars disabled
 
         // Update and handle meteors - random intervals between 5-20 seconds for dramatic effect
         meteor_timer += dt * speed_mult;
@@ -1164,7 +1166,7 @@ int main(int argc, char *argv[]) {
 
         // RENDER GAP STARS BETWEEN BUILDINGS - Continuous density gradient (no stencil needed)
         // NOTE: ENABLED for subtle slow rotation effect
-        render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);
+        // render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);  // DISABLED: gap stars disabled
 
         // No stencil operations needed for gap stars - they render in open spaces
 
