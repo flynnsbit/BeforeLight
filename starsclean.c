@@ -41,8 +41,13 @@ void init_stars(Star *stars, int count, int screen_width, int screen_height) {
         stars[i].vx = 0.0f;
         stars[i].vy = 0.0f;
 
-        // Brightness: Maximum brightness for all stars
-        stars[i].brightness = 1.0f; // Full brightness (no twinkling)
+        // Brightness: High baseline with twinkling
+        stars[i].base_brightness = 0.8f; // Bright baseline
+        stars[i].brightness = stars[i].base_brightness;
+
+        // Twinkling parameters: individual patterns for each star
+        stars[i].twinkle_phase = (float)(rand() % 628) / 100.0f; // Random 0-6.28 radians
+        stars[i].twinkle_speed = 0.5f + (float)(rand() % 150) / 100.0f; // 0.5-2.0 range
 
         // Size variation (unused in current render)
         stars[i].size = 1.0f;
@@ -53,11 +58,23 @@ void init_stars(Star *stars, int count, int screen_width, int screen_height) {
 }
 
 /**
- * Update star system - static bright stars (no updates needed)
+ * Update star system - handle twinkling for bright rendering
  */
 void update_stars(Star *stars, int count, float dt, int screen_width, int screen_height) {
-    (void)stars; (void)count; (void)dt; (void)screen_width; (void)screen_height; // Suppress warnings
-    // Stars are static and always bright - no updates required
+    static float time = 0;
+    time += dt;
+
+    for (int i = 0; i < count; i++) {
+        (void)dt; (void)screen_width; (void)screen_height; // Suppress unused parameter warnings
+
+        // Individual twinkling: sinusoidal oscillation around base brightness
+        float twinkle_offset = sinf(time * stars[i].twinkle_speed + stars[i].twinkle_phase) * 0.3f;
+        stars[i].brightness = stars[i].base_brightness + twinkle_offset;
+
+        // Clamp brightness to prevent over/underflow
+        if (stars[i].brightness < 0.2f) stars[i].brightness = 0.2f;
+        if (stars[i].brightness > 1.0f) stars[i].brightness = 1.0f;
+    }
 }
 
 /**
