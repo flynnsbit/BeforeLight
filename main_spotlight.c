@@ -236,7 +236,11 @@ int main(int argc, char *argv[]) {
         SDL_Delay(16); // ~60fps
     }
 
-    // Cleanup - Window close will restore fullscreen state and show Waybar
+    // Exit fullscreen on quit to show Waybar immediately
+    system("hyprctl dispatch fullscreen > /dev/null 2>&1");
+    SDL_Delay(200); // Allow Hyprland to process fullscreen exit
+
+    // Cleanup
     if (bg_tex) SDL_DestroyTexture(bg_tex);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
