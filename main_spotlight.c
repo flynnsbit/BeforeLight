@@ -237,6 +237,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Cleanup
+    // Note: Window close should automatically restore fullscreen state and show Waybar
     if (bg_tex) SDL_DestroyTexture(bg_tex);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
