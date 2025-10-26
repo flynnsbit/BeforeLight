@@ -1,20 +1,14 @@
 #include <SDL.h>
 #include <SDL_image.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
 #include <math.h>
 #include <time.h>
 #include <unistd.h> // for getopt
 #include <stdlib.h>
+#include "assets/omarchy_logo.h"
 
 #define PI 3.141592653589793f
 
 extern char *optarg;
-
-int x_error_handler(Display *display __attribute__((unused)), XErrorEvent *error __attribute__((unused))) {
-    // Ignore X errors and continue
-    return 0;
-}
 
 static void usage(const char *prog) {
     fprintf(stderr, "Usage: %s [options]\n", prog);
@@ -59,80 +53,26 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Change to project directory for consistent paths
-    chdir("..");
-
     // Try taking screenshot using grim (Wayland screenshot tool)
     SDL_Surface *screenshot_surf = NULL;
-    int grim_result = system("grim spotlight_temp.png 2>/dev/null");
+    SDL_Log("Attempting screen capture...");
+    int grim_result = system("grim spotlight_temp.png 2>&1");
     if (grim_result == 0) {
+        SDL_Log("Screen capture succeeded");
         screenshot_surf = IMG_Load("spotlight_temp.png");
         unlink("spotlight_temp.png");
+    } else {
+        SDL_Log("Screen capture failed (exit code %d)", grim_result);
     }
 
     if (!screenshot_surf) {
-        // Fallback to X11 method
-        Display *display = XOpenDisplay(NULL);
-        if (!display) {
-            SDL_Log("Cannot open X display for screenshot");
-        } else {
-            Screen *screen = DefaultScreenOfDisplay(display);
-            int screen_num = DefaultScreen(display);
-            Window root = RootWindow(display, screen_num);
-            int screen_width = WidthOfScreen(screen);
-            int screen_height = HeightOfScreen(screen);
-
-            // Set custom error handler to prevent X errors from killing the program
-            XSetErrorHandler(x_error_handler);
-
-            XImage *ximg = XGetImage(display, root, 0, 0, screen_width, screen_height, AllPlanes, ZPixmap);
-            if (!ximg) {
-                // Try fallback with different visual
-                ximg = XGetImage(display, root, 0, 0, screen_width, screen_height, AllPlanes, XYPixmap);
-            }
-            if (ximg) {
-                // Create SDL surface from XImage
-                screenshot_surf = SDL_CreateRGBSurface(0, screen_width, screen_height, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
-                if (screenshot_surf) {
-                    // Copy pixel data from XImage to SDL surface
-                    for (int y = 0; y < screen_height; y++) {
-                        for (int x = 0; x < screen_width; x++) {
-                            unsigned long pixel = XGetPixel(ximg, x, y);
-                            unsigned char r = (pixel >> 16) & 0xff;
-                            unsigned char g = (pixel >> 8) & 0xff;
-                            unsigned char b = pixel & 0xff;
-                            Uint32 color = SDL_MapRGB(screenshot_surf->format, r, g, b);
-                            ((Uint32*)screenshot_surf->pixels)[y * screenshot_surf->w + x] = color;
-                        }
-                    }
-                }
-                XDestroyImage(ximg);
-            }
-            XCloseDisplay(display);
+        SDL_Log("Cannot capture screen, using embedded Omarchy logo as fallback");
+        SDL_RWops *rw = SDL_RWFromMem(omarchy_logo, omarchy_logo_len);
+        if (rw) {
+            screenshot_surf = IMG_Load_RW(rw, 1);  // 1 to auto-close rw
         }
-    }
-
-    if (!screenshot_surf) {
-        SDL_Log("Cannot capture screen, using fallback background image");
-        // Load fallback image
-        screenshot_surf = IMG_Load("img/spotlight_bg.png");
         if (!screenshot_surf) {
-            SDL_Log("Cannot load img/spotlight_bg.png: %s, trying img/macos-desktop.png", IMG_GetError());
-            screenshot_surf = IMG_Load("img/macos-desktop.png");
-            if (!screenshot_surf) {
-                SDL_Log("Cannot load img/macos-desktop.png: %s, creating dummy background", IMG_GetError());
-                // Create a dummy surface with a gradient background as test
-                screenshot_surf = SDL_CreateRGBSurface(0, 800, 600, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
-                if (screenshot_surf) {
-                    // Fill with solid white for visibility
-                    for (int y = 0; y < 600; y++) {
-                        for (int x = 0; x < 800; x++) {
-                            Uint32 color = SDL_MapRGB(screenshot_surf->format, 255, 255, 255);
-                            ((Uint32*)screenshot_surf->pixels)[y * 800 + x] = color;
-                        }
-                    }
-                }
-            }
+            SDL_Log("Failed to load embedded logo: %s", IMG_GetError());
         }
     }
 
@@ -143,8 +83,23 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    Uint32 flags = SDL_WINDOW_SHOWN;
+    int win_w = 800;
+    int win_h = 600;
+    int win_x = SDL_WINDOWPOS_UNDEFINED;
+    int win_y = SDL_WINDOWPOS_UNDEFINED;
+    SDL_Rect bounds = {0};
+    if (do_fullscreen) {
+        flags |= SDL_WINDOW_BORDERLESS;
+        SDL_GetDisplayBounds(0, &bounds); // assume display 0
+        win_w = bounds.w;
+        win_h = bounds.h;
+        win_x = bounds.x;
+        win_y = bounds.y;
+    }
+
     // Now create window
-    SDL_Window *window = SDL_CreateWindow("Spotlight", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
+    SDL_Window *window = SDL_CreateWindow("Spotlight", win_x, win_y, win_w, win_h, flags);
     if (window == NULL) {
         SDL_Log("SDL_CreateWindow Error: %s", SDL_GetError());
         IMG_Quit();
@@ -161,14 +116,20 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (do_fullscreen) {
-        if (SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) != 0) {
-            SDL_Log("Warning: Failed to set fullscreen: %s", SDL_GetError());
-        }
-    }
-
     int W, H;
-    SDL_GetRendererOutputSize(renderer, &W, &H);
+    if (do_fullscreen) {
+        int display = SDL_GetWindowDisplayIndex(window);
+        SDL_Rect bounds;
+        SDL_GetDisplayBounds(display, &bounds);
+        W = bounds.w;
+        H = bounds.h;
+        SDL_Log("Fullscreen display size: W=%d H=%d", W, H);
+        // Set logical renderer size to match display
+        SDL_RenderSetLogicalSize(renderer, W, H);
+    } else {
+        SDL_GetRendererOutputSize(renderer, &W, &H);
+        SDL_Log("Renderer size: W=%d H=%d", W, H);
+    }
 
     // Create texture from screenshot
     SDL_Texture *bg_tex = SDL_CreateTextureFromSurface(renderer, screenshot_surf);
@@ -203,7 +164,8 @@ int main(int argc, char *argv[]) {
     // Get texture dimensions
     int tex_width, tex_height;
     SDL_QueryTexture(bg_tex, NULL, NULL, &tex_width, &tex_height);
-    float scale_factor = (float)W / tex_width; // scale to avoid zoom, show 1:1
+    SDL_Log("Texture size: width=%d height=%d", tex_width, tex_height);
+    float scale_factor = 1.0f; // stretch to fill for both modes
     float spotlight_x = W / 2.0f;
     float spotlight_y = H / 2.0f;
     float spotlight_vx = (rand() % 400 - 200) * 1.0f;

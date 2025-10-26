@@ -33,7 +33,7 @@ rainstorm: main_rainstorm.c
 	$(CC) $(CFLAGS) -o build/rainstorm main_rainstorm.c $(LDFLAGS)
 
 spotlight: main_spotlight.c
-	$(CC) $(CFLAGS) -o build/spotlight main_spotlight.c $(LDFLAGS) -lX11
+	$(CC) $(CFLAGS) -o build/spotlight main_spotlight.c $(LDFLAGS)
 
 lifeforms: main_lifeforms.c
 	$(CC) $(CFLAGS) -o build/lifeforms main_lifeforms.c $(LDFLAGS)
