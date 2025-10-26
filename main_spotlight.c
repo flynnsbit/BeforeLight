@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 
     if (do_fullscreen) {
         // Make window fullscreen in Hyprland to hide the bar
-        system("hyprctl dispatch fullscreen");
+        system("hyprctl dispatch fullscreen > /dev/null 2>&1");
     }
 
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -237,7 +237,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Cleanup
-    // Note: Window close should automatically restore fullscreen state and show Waybar
+    // Restore fullscreen state to show Waybar
+    system("hyprctl dispatch fullscreen > /dev/null 2>&1");
     if (bg_tex) SDL_DestroyTexture(bg_tex);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
