@@ -719,7 +719,7 @@ int main() {
 
     halfdelay(1); // Non-blocking input with 100ms timeout
 
-    int ch;
+    int ch, ch2;  // ch2 for secondary character input (vim gg handling)
     while (1) {
         draw_menu(list_win, desc_win, selected_index);
 
@@ -767,11 +767,18 @@ int main() {
         }
 
         switch (ch) {
+            // Arrow key navigation
             case KEY_UP:
                 if (selected_index > 0) selected_index--;
                 break;
             case KEY_DOWN:
                 if (selected_index < (int)NUM_SAVERS - 1) selected_index++;
+                break;
+            case KEY_LEFT:
+                if (selected_index > 0) selected_index--;  // Same as up
+                break;
+            case KEY_RIGHT:
+                if (selected_index < (int)NUM_SAVERS - 1) selected_index++;  // Same as down
                 break;
             case KEY_PPAGE:  // Page Up
                 selected_index -= 10;
@@ -781,6 +788,39 @@ int main() {
                 selected_index += 10;
                 if (selected_index >= (int)NUM_SAVERS) selected_index = NUM_SAVERS - 1;
                 break;
+
+            // Vim-style navigation
+            case 'k':  // Vim up
+                if (selected_index > 0) selected_index--;
+                break;
+            case 'j':  // Vim down
+                if (selected_index < (int)NUM_SAVERS - 1) selected_index++;
+                break;
+            case 'h':  // Vim left (same as up)
+                if (selected_index > 0) selected_index--;
+                break;
+            case 'l':  // Vim right (same as down)
+                if (selected_index < (int)NUM_SAVERS - 1) selected_index++;
+                break;
+            case 'g':  // Potential 'gg' start (two 'g's needed)
+                // Wait for second 'g'
+                ch2 = wgetch(stdscr);
+                if (ch2 == 'g') {
+                    selected_index = 0;  // Go to top
+                }
+                break;
+            case 'G':  // Vim bottom
+                selected_index = NUM_SAVERS - 1;
+                break;
+            case 21:  // Ctrl+U (0x15) - half page up
+                selected_index -= 10;
+                if (selected_index < 0) selected_index = 0;
+                break;
+            case 4:   // Ctrl+D (0x04) - half page down
+                selected_index += 10;
+                if (selected_index >= (int)NUM_SAVERS) selected_index = NUM_SAVERS - 1;
+                break;
+
             case '\n':
             case KEY_ENTER:
                 select_screensaver(selected_index);
