@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h> // for getopt
-#include "globe_texture.h"
+#include "assets/globe_texture.h"
 
 #define PI 3.14159f
 

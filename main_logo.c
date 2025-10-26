@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h> // for getopt
-#include "logo.h"
+#include "assets/logo.h"
 
 extern char *optarg;
 

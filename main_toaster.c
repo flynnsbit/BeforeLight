@@ -1,10 +1,10 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include "toaster_sprite.h"
-#include "toast0.h"
-#include "toast1.h"
-#include "toast2.h"
-#include "toast3.h"
+#include "assets/toaster_sprite.h"
+#include "assets/toast0.h"
+#include "assets/toast1.h"
+#include "assets/toast2.h"
+#include "assets/toast3.h"
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
