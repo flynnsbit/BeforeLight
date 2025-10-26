@@ -526,7 +526,13 @@ void draw_menu(WINDOW *list_win, WINDOW *desc_win, int highlight) {
 
     int y = 2;
     int max_visible = 20; // Show 20 items at once
-    int start_idx = highlight / max_visible * max_visible;
+    int start_idx = (highlight / max_visible) * max_visible;
+
+    // Ensure start_idx doesn't go beyond available items
+    if (start_idx + max_visible > (int)NUM_SAVERS) {
+        start_idx = (int)NUM_SAVERS - max_visible;
+        if (start_idx < 0) start_idx = 0;
+    }
 
     for (int i = start_idx; i < (int)NUM_SAVERS && i < start_idx + max_visible; i++) {
         if (i == highlight) wattron(list_win, A_REVERSE);
@@ -539,9 +545,15 @@ void draw_menu(WINDOW *list_win, WINDOW *desc_win, int highlight) {
 
         if (i == highlight) wattroff(list_win, A_REVERSE);
     }
-    mvwprintw(list_win, y++, 2, "Navigation: UP/DOWN arrows, PageUp/PageDown for faster scrolling");
-    mvwprintw(list_win, y++, 2, "ENTER: Select | C: Configure | P: Preview | R: Restore default");
-    mvwprintw(list_win, y++, 2, "Q: Quit (ESC also works)");
+
+    // Clear any remaining lines that might have old content
+    for (; y < LINES - 1; y++) {
+        mvwprintw(list_win, y, 1, "%*s", COLS - 2, ""); // Clear line with spaces
+    }
+
+    mvwprintw(list_win, LINES-4, 2, "Navigation: UP/DOWN arrows, PageUp/PageDown for faster scrolling");
+    mvwprintw(list_win, LINES-3, 2, "ENTER: Select | C: Configure | P: Preview | R: Restore default");
+    mvwprintw(list_win, LINES-2, 2, "Q: Quit (ESC also works)");
 
     wrefresh(list_win);
 
