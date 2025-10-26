@@ -550,7 +550,7 @@ void draw_menu(WINDOW *list_win, WINDOW *desc_win, int highlight) {
     }
 
     // Consolidate instructions to save space
-    mvwprintw(list_win, LINES-3, 2, "Nav: ↑↓, PgUp/PgDn | Select: ENTER/Click | Config: C | Preview: P | Restore: R | Quit: Q");
+    mvwprintw(list_win, LINES-3, 2, "Nav: ↑↓, PgUp/PgDn | Select: ENTER (mouse may not work in Wayland) | Config: C | Preview: P | Restore: R | Quit: Q");
 
     // Draw border last to avoid overwriting by clearing
     box(list_win, 0, 0);
@@ -716,12 +716,22 @@ int main() {
             continue;
         }
 
-        // Handle mouse events
+        // Handle mouse events (may not work in all Wayland terminals)
         if (ch == KEY_MOUSE) {
             if (getmouse(&mouse_event) == OK) {
-                // Handle clicks in the list window (left pane)
-                if (wenclose(list_win, mouse_event.y, mouse_event.x) &&
+                // Handle clicks in the list window (left pane) - check absolute screen coordinates
+                int list_win_x, list_win_y;
+                int list_win_width, list_win_height;
+                getbegyx(list_win, list_win_y, list_win_x);
+                getmaxyx(list_win, list_win_height, list_win_width);
+
+                if (mouse_event.x >= list_win_x && mouse_event.x < list_win_x + list_win_width &&
+                    mouse_event.y >= list_win_y && mouse_event.y < list_win_y + list_win_height &&
                     mouse_event.bstate & BUTTON1_CLICKED) {
+
+                    // Calculate which item was clicked (relative to window)
+                    int rel_x = mouse_event.x - list_win_x;
+                    int rel_y = mouse_event.y - list_win_y;
 
                     // Calculate which item was clicked
                     int max_visible = 20;
@@ -731,13 +741,11 @@ int main() {
                         if (start_idx < 0) start_idx = 0;
                     }
 
-                    // Convert mouse Y coordinate to item index
-                    int click_y = mouse_event.y - 1;  // Subtract title padding (changed from 2 to 1)
-                    if (click_y >= 1 && click_y <= max_visible) {  // Adjusted range (1-based, title is at y=1)
-                        int clicked_item = start_idx + (click_y - 1);  // -1 because y starts at 1 (title)
-                        if (clicked_item >= 0 && clicked_item < (int)NUM_SAVERS) {
-                            selected_index = clicked_item;
-                            // Don't simulate enter - just move selection
+                    // Items start at window y=2 (0-indexed), title is y=1
+                    if (rel_y >= 2) {
+                        int item_index = (rel_y - 2) + start_idx;
+                        if (item_index >= 0 && item_index < (int)NUM_SAVERS) {
+                            selected_index = item_index;
                         }
                     }
                 }
