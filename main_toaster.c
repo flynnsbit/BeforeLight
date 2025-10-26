@@ -1,5 +1,10 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include "toaster_sprite.h"
+#include "toast0.h"
+#include "toast1.h"
+#include "toast2.h"
+#include "toast3.h"
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
@@ -215,26 +220,56 @@ int main(int argc, char *argv[]) {
     SDL_GetRendererOutputSize(renderer, &W, &H);
 
     // Load textures
-    SDL_Surface *surf = IMG_Load("../img/toaster-sprite.gif");
-    if (!surf) {
-        SDL_Log("Error loading toaster-sprite.gif: %s", IMG_GetError());
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
+    SDL_Texture *toaster_tex;
+    {
+        SDL_RWops *rw = SDL_RWFromConstMem(toaster_sprite, toaster_sprite_len);
+        if (!rw) {
+            SDL_Log("Error creating RWops for embedded toaster_sprite: %s", SDL_GetError());
+            SDL_DestroyRenderer(renderer);
+            SDL_DestroyWindow(window);
+            IMG_Quit();
+            SDL_Quit();
+            return 1;
+        }
+        SDL_Surface *surf = IMG_Load_RW(rw, 1); // 1 to autoclose
+        if (!surf) {
+            SDL_Log("Error loading embedded toaster_sprite: %s", IMG_GetError());
+            SDL_DestroyRenderer(renderer);
+            SDL_DestroyWindow(window);
+            IMG_Quit();
+            SDL_Quit();
+            return 1;
+        }
+        toaster_tex = SDL_CreateTextureFromSurface(renderer, surf);
+        SDL_FreeSurface(surf);
     }
-    SDL_Texture *toaster_tex = SDL_CreateTextureFromSurface(renderer, surf);
-    SDL_FreeSurface(surf);
 
     SDL_Texture *toast_texs[4];
     for (int i = 0; i < 4; i++) {
-        char buf[25];
-        sprintf(buf, "../img/toast%d.gif", i);
-        surf = IMG_Load(buf);
-        if (!surf) {
-            SDL_Log("Error loading %s: %s", buf, IMG_GetError());
+        const unsigned char *data = NULL;
+        unsigned int len = 0;
+        switch (i) {
+            case 0: data = toast0; len = toast0_len; break;
+            case 1: data = toast1; len = toast1_len; break;
+            case 2: data = toast2; len = toast2_len; break;
+            case 3: data = toast3; len = toast3_len; break;
+        }
+        SDL_RWops *rw = SDL_RWFromConstMem(data, len);
+        if (!rw) {
+            SDL_Log("Error creating RWops for embedded toast%d: %s", i, SDL_GetError());
             SDL_DestroyTexture(toaster_tex);
+            for (int j = 0; j < i; j++) SDL_DestroyTexture(toast_texs[j]);
+            SDL_DestroyRenderer(renderer);
+            SDL_DestroyWindow(window);
+            IMG_Quit();
+            SDL_Quit();
+            return 1;
+        }
+        SDL_Surface *surf = IMG_Load_RW(rw, 1); // 1 to autoclose
+        if (!surf) {
+            SDL_Log("Error loading embedded toast%d: %s", i, IMG_GetError());
+            SDL_DestroyTexture(toaster_tex);
+            for (int j = 0; j < i; j++) SDL_DestroyTexture(toast_texs[j]);
             SDL_DestroyRenderer(renderer);
             SDL_DestroyWindow(window);
             IMG_Quit();

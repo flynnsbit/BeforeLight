@@ -1,5 +1,17 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include "fish_angel.h"
+#include "fish_butterfly.h"
+#include "fish_flounder.h"
+#include "fish_guppy.h"
+#include "fish_jelly.h"
+#include "fish_minnow.h"
+#include "fish_red.h"
+#include "fish_seahorse.h"
+#include "fish_sprite.h"
+#include "fish_striped.h"
+#include "seafloor.h"
+#include "bubbles_50.h"
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
@@ -155,11 +167,33 @@ int main(int argc, char *argv[]) {
     SDL_Texture *fish_texs[10], *bg_tex, *bubble_tex;
     SDL_Surface *surf;
     int bg_w = 0, bg_h = 0;
-    const char *fish_names[10] = {"../img/fish-angel.png", "../img/fish-butterfly.png", "../img/fish-flounder.png", "../img/fish-guppy.png", "../img/fish-jelly.png", "../img/fish-minnow.png", "../img/fish-red.png", "../img/fish-seahorse.png", "../img/fish-sprite.png", "../img/fish-striped.png"};
     for (int i = 0; i < 10; i++) {
-        surf = IMG_Load(fish_names[i]);
+        const unsigned char *data = NULL;
+        unsigned int len = 0;
+        switch (i) {
+            case 0: data = fish_angel; len = fish_angel_len; break;
+            case 1: data = fish_butterfly; len = fish_butterfly_len; break;
+            case 2: data = fish_flounder; len = fish_flounder_len; break;
+            case 3: data = fish_guppy; len = fish_guppy_len; break;
+            case 4: data = fish_jelly; len = fish_jelly_len; break;
+            case 5: data = fish_minnow; len = fish_minnow_len; break;
+            case 6: data = fish_red; len = fish_red_len; break;
+            case 7: data = fish_seahorse; len = fish_seahorse_len; break;
+            case 8: data = fish_sprite; len = fish_sprite_len; break;
+            case 9: data = fish_striped; len = fish_striped_len; break;
+        }
+        SDL_RWops *rw = SDL_RWFromConstMem(data, len);
+        if (!rw) {
+            SDL_Log("Error creating RWops for embedded fish texture %d: %s", i, SDL_GetError());
+            SDL_DestroyRenderer(renderer);
+            SDL_DestroyWindow(window);
+            IMG_Quit();
+            SDL_Quit();
+            return 1;
+        }
+        surf = IMG_Load_RW(rw, 1); // 1 to autoclose
         if (!surf) {
-            SDL_Log("Error loading %s: %s", fish_names[i], IMG_GetError());
+            SDL_Log("Error loading embedded fish texture %d: %s", i, IMG_GetError());
             SDL_DestroyRenderer(renderer);
             SDL_DestroyWindow(window);
             IMG_Quit();
@@ -171,22 +205,38 @@ int main(int argc, char *argv[]) {
     }
 
     // Background seabed
-    surf = IMG_Load("../img/seafloor.jpg");
-    if (!surf) {
-        SDL_Log("Error loading seafloor.jpg: %s", IMG_GetError());
+    SDL_RWops *rw_bg = SDL_RWFromConstMem(seafloor, seafloor_len);
+    if (!rw_bg) {
+        SDL_Log("Error creating RWops for embedded seafloor: %s", SDL_GetError());
         // Skip background
         bg_tex = NULL;
     } else {
-        bg_tex = SDL_CreateTextureFromSurface(renderer, surf);
-        bg_w = surf->w;
-        bg_h = surf->h;
-        SDL_FreeSurface(surf);
+        surf = IMG_Load_RW(rw_bg, 1); // 1 to autoclose
+        if (!surf) {
+            SDL_Log("Error loading embedded seafloor: %s", IMG_GetError());
+            // Skip background
+            bg_tex = NULL;
+        } else {
+            bg_tex = SDL_CreateTextureFromSurface(renderer, surf);
+            bg_w = surf->w;
+            bg_h = surf->h;
+            SDL_FreeSurface(surf);
+        }
     }
 
     // Bubbles
-    surf = IMG_Load("../img/bubbles_50.png");
+    SDL_RWops *rw_bubble = SDL_RWFromConstMem(bubbles_50, bubbles_50_len);
+    if (!rw_bubble) {
+        SDL_Log("Error creating RWops for embedded bubbles: %s", SDL_GetError());
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
+    }
+    surf = IMG_Load_RW(rw_bubble, 1); // 1 to autoclose
     if (!surf) {
-        SDL_Log("Error loading bubbles_50.png: %s", IMG_GetError());
+        SDL_Log("Error loading embedded bubbles: %s", IMG_GetError());
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         IMG_Quit();

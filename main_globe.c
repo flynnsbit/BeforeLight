@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h> // for getopt
+#include "globe_texture.h"
 
 #define PI 3.14159f
 
@@ -63,9 +64,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Change to project root directory for consistent relative path resolution
-    chdir("..");
-
     SDL_Window *window = SDL_CreateWindow("Globe", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
     if (window == NULL) {
         SDL_Log("SDL_CreateWindow Error: %s", SDL_GetError());
@@ -92,10 +90,19 @@ int main(int argc, char *argv[]) {
     int W, H;
     SDL_GetRendererOutputSize(renderer, &W, &H);
 
-    // Load globe texture
-    SDL_Surface *surf = IMG_Load("img/globe_240.jpg");
+    // Load globe texture from embedded data
+    SDL_RWops *rw = SDL_RWFromConstMem(globe_texture, globe_texture_len);
+    if (!rw) {
+        SDL_Log("Error creating RWops for embedded globe texture: %s", SDL_GetError());
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
+    }
+    SDL_Surface *surf = IMG_Load_RW(rw, 1); // 1 to autoclose
     if (!surf) {
-        SDL_Log("Error loading globe_240.jpg: %s", IMG_GetError());
+        SDL_Log("Error loading embedded globe texture: %s", IMG_GetError());
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         IMG_Quit();

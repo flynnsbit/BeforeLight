@@ -3,6 +3,7 @@
 #include <math.h>
 #include <time.h>
 #include <unistd.h> // for getopt
+#include "logo.h"
 
 extern char *optarg;
 
@@ -51,10 +52,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Change to project root directory for consistent relative path resolution
-    chdir("..");
-    chdir("img");
-
     SDL_Window *window = SDL_CreateWindow("Logo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
     if (window == NULL) {
         SDL_Log("SDL_CreateWindow Error: %s", SDL_GetError());
@@ -82,9 +79,18 @@ int main(int argc, char *argv[]) {
     SDL_GetRendererOutputSize(renderer, &W, &H);
 
     // Load logo texture
-    SDL_Surface *surf = IMG_Load("logo.png");
+    SDL_RWops *rw = SDL_RWFromConstMem(logo, logo_len);
+    if (!rw) {
+        SDL_Log("Error creating RWops for embedded logo texture: %s", SDL_GetError());
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
+    }
+    SDL_Surface *surf = IMG_Load_RW(rw, 1); // 1 to autoclose
     if (!surf) {
-        SDL_Log("Error loading logo.png: %s", IMG_GetError());
+        SDL_Log("Error loading embedded logo texture: %s", IMG_GetError());
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         IMG_Quit();
