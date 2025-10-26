@@ -1,0 +1,6 @@
+- [x] Add setenv("SDL_VIDEODRIVER", "wayland", 1) to main_logo.c for consistency with other screensavers
+- [x] Add setenv("SDL_VIDEODRIVER", "wayland", 1) to main_globe.c for consistency with other screensavers
+- [x] Add debug logging to all screensaver event loops (logo, globe, fish, toaster) to identify what triggers premature quit
+- [x] Rebuild screensavers with environment fixes
+- [x] Test screensavers from command line to ensure no regression (build successful, omarchy launcher now works)
+- [ ] Note: omarchy scripts and alacritty config are in separate location and cannot be modified from this repository

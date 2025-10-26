@@ -27,8 +27,8 @@ extern char *optarg;
 static void usage(const char *prog) {
     fprintf(stderr, "Usage: %s [options]\n", prog);
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -t N    Number of toasters (default: all)\n");
-    fprintf(stderr, "  -m N    Number of toast pieces (default: all)\n");
+    fprintf(stderr, "  -t N    Number of fish (default: all)\n");
+    fprintf(stderr, "  -m N    Number of bubbles (default: all)\n");
     fprintf(stderr, "  -s F    Speed multiplier (default: 1.0)\n");
     fprintf(stderr, "  -f 0|1  Fullscreen (1=yes, 0=windowed) (default: 1)\n");
     fprintf(stderr, "  -h      Show this help\n");
@@ -95,18 +95,18 @@ const Entity entities[] = {
 
 int main(int argc, char *argv[]) {
     int opt;
-    int toaster_count = 30;
-    int toast_count = 15;
+    int fish_count = 30;
+    int bubble_count = 15;
     float speed_mult = 1.0f;
     int do_fullscreen = 1;
 
     while ((opt = getopt(argc, argv, "t:m:s:f:h")) != -1) {
         switch (opt) {
             case 't':
-                toaster_count = atoi(optarg);
+                fish_count = atoi(optarg);
                 break;
             case 'm':
-                toast_count = atoi(optarg);
+                bubble_count = atoi(optarg);
                 break;
             case 's':
                 speed_mult = atof(optarg);
@@ -254,6 +254,7 @@ int main(int argc, char *argv[]) {
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT || e.type == SDL_KEYDOWN || e.type == SDL_MOUSEBUTTONDOWN) {
+                SDL_Log("Screensaver quit triggered: event type %d", e.type);
                 quit = 1;
             }
         }
@@ -278,7 +279,9 @@ int main(int argc, char *argv[]) {
         size_t entity_count = sizeof(entities) / sizeof(entities[0]);
 
         // Render bubbles (is_toaster==1)
+        int drawn_bubbles = 0;
         for (size_t i = 0; i < entity_count; i++) {
+            if (drawn_bubbles >= bubble_count) break;
             const Entity ent = entities[i];
             if (ent.is_toaster != 1) continue;
             const struct AnimParam ap = anim_params[ent.anim_type];
@@ -299,6 +302,7 @@ int main(int argc, char *argv[]) {
             SDL_Rect bubble_srcrect = {bubble_frame * 50, 0, 50, 56};
 
             SDL_RenderCopy(renderer, bubble_tex, &bubble_srcrect, &dstrect);
+            drawn_bubbles++;
         }
 
         // Render fish (is_toaster==0)
@@ -306,7 +310,7 @@ int main(int argc, char *argv[]) {
         for (size_t i = 0; i < entity_count; i++) {
             const Entity ent = entities[i];
             if (ent.is_toaster != 0) continue;
-            if (drawn_fish >= toast_count) continue;
+            if (drawn_fish >= fish_count) continue;
             const struct AnimParam ap = anim_params[ent.anim_type];
             const struct Pos pos = poses[ent.pos_index];
 
@@ -330,7 +334,6 @@ int main(int argc, char *argv[]) {
             int fish_size = SPRITE_SIZE / 2;
 
             // Calculate start position
-            float start_x = 0;
             float start_y = (current_top_pct / 100.0f * H) - fish_size / 2.0f;
 
             // Fish swim animation

@@ -288,6 +288,7 @@ int main(int argc, char *argv[]) {
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT || e.type == SDL_KEYDOWN || e.type == SDL_MOUSEBUTTONDOWN) {
+                SDL_Log("Screensaver quit triggered: event type %d", e.type);
                 quit = 1;
             }
         }

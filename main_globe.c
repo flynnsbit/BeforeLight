@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // Removed setenv for style testing
+    setenv("SDL_VIDEODRIVER", "wayland", 1); // Force Wayland for Hyprland
     srand(time(NULL));
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -124,6 +124,7 @@ int main(int argc, char *argv[]) {
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT || e.type == SDL_KEYDOWN || e.type == SDL_MOUSEBUTTONDOWN) {
+                SDL_Log("Screensaver quit triggered: event type %d", e.type);
                 quit = 1;
             }
         }

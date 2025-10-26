@@ -53,7 +53,10 @@ paperfire: main_paperfire.c
 cityscape: main_cityscape.c
 	$(CC) $(CFLAGS) -o build/cityscape main_cityscape.c $(LDFLAGS)
 
-all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix randomizer paperfire cityscape
+screensaver_config: screensaver_config.c
+	$(CC) -Wall -Wextra -O2 -o build/screensaver_config screensaver_config.c -lncurses -lm
+
+all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix randomizer paperfire cityscape screensaver_config
 
 clean:
 	rm -f build/*
