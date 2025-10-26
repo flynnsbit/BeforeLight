@@ -13,10 +13,13 @@
 #include <ncurses.h>
 #include <dirent.h>
 #include <unistd.h>
-#include <sys/wait.h>     
+#include <sys/wait.h>
 #include <sys/types.h>
 #include <signal.h>
 #include <sys/stat.h>
+
+// Mouse event handling
+MEVENT mouse_event;
 
 // Script paths - use dynamic paths based on current user
 #define SCRIPT_PATH_ALTERNATE "$HOME/.config/omarchy/branding/screensaver/omarchy-cmd-screensaver"
@@ -520,11 +523,7 @@ void draw_menu(WINDOW *list_win, WINDOW *desc_win, int highlight) {
     // Clear the list pane completely
     werase(list_win);
 
-    // Draw left pane - screensaver list
-    box(list_win, 0, 0);
-    mvwprintw(list_win, 0, 2, "Screensaver Configuration Tool");
-
-    int y = 2;
+    int y = 1;
     int max_visible = 20; // Show 20 items at once
     int start_idx = (highlight / max_visible) * max_visible;
 
@@ -534,6 +533,10 @@ void draw_menu(WINDOW *list_win, WINDOW *desc_win, int highlight) {
         if (start_idx < 0) start_idx = 0;
     }
 
+    // Title
+    mvwprintw(list_win, y++, 2, "Screensaver Configuration Tool");
+
+    // Draw items
     for (int i = start_idx; i < (int)NUM_SAVERS && i < start_idx + max_visible; i++) {
         if (i == highlight) wattron(list_win, A_REVERSE);
 
@@ -546,15 +549,11 @@ void draw_menu(WINDOW *list_win, WINDOW *desc_win, int highlight) {
         if (i == highlight) wattroff(list_win, A_REVERSE);
     }
 
-    // Clear any remaining lines that might have old content
-    for (; y < LINES - 1; y++) {
-        mvwprintw(list_win, y, 1, "%*s", COLS - 2, ""); // Clear line with spaces
-    }
+    // Consolidate instructions to save space
+    mvwprintw(list_win, LINES-3, 2, "Nav: ↑↓, PgUp/PgDn | Select: ENTER/Click | Config: C | Preview: P | Restore: R | Quit: Q");
 
-    mvwprintw(list_win, LINES-4, 2, "Navigation: UP/DOWN arrows, PageUp/PageDown for faster scrolling");
-    mvwprintw(list_win, LINES-3, 2, "ENTER: Select | C: Configure | P: Preview | R: Restore default");
-    mvwprintw(list_win, LINES-2, 2, "Q: Quit (ESC also works)");
-
+    // Draw border last to avoid overwriting by clearing
+    box(list_win, 0, 0);
     wrefresh(list_win);
 
     // Clear the description pane completely
@@ -663,6 +662,10 @@ int main() {
     keypad(stdscr, TRUE);
     curs_set(0);
 
+    // Enable mouse support
+    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+    mouseinterval(0);
+
     start_color();
     init_pair(1, COLOR_WHITE, COLOR_BLACK);
     init_pair(2, COLOR_YELLOW, COLOR_BLACK);
@@ -706,6 +709,35 @@ int main() {
 
         ch = wgetch(list_win);
 
+        // Handle mouse events
+        if (ch == KEY_MOUSE) {
+            if (getmouse(&mouse_event) == OK) {
+                // Handle clicks in the list window (left pane)
+                if (wenclose(list_win, mouse_event.y, mouse_event.x) &&
+                    mouse_event.bstate & BUTTON1_CLICKED) {
+
+                    // Calculate which item was clicked
+                    int max_visible = 20;
+                    int start_idx = (selected_index / max_visible) * max_visible;
+                    if (start_idx + max_visible > (int)NUM_SAVERS) {
+                        start_idx = (int)NUM_SAVERS - max_visible;
+                        if (start_idx < 0) start_idx = 0;
+                    }
+
+                    // Convert mouse Y coordinate to item index
+                    int click_y = mouse_event.y - 2;  // Subtract top padding
+                    if (click_y >= 0 && click_y < max_visible) {
+                        int clicked_item = start_idx + click_y;
+                        if (clicked_item >= 0 && clicked_item < (int)NUM_SAVERS) {
+                            selected_index = clicked_item;
+                            ch = '\n';  // Simulate enter key for selection
+                        }
+                    }
+                }
+            }
+            continue;  // Skip normal key processing for mouse events
+        }
+
         switch (ch) {
             case KEY_UP:
                 if (selected_index > 0) selected_index--;
@@ -725,7 +757,7 @@ int main() {
             case KEY_ENTER:
                 select_screensaver(selected_index);
                 // Show selection confirmation
-                mvwprintw(list_win, LINES-3, 2, "Selected: %s - Press Q to exit",
+                mvwprintw(list_win, LINES-2, 2, "Selected: %s - Press Q to exit",
                          savers[selected_index].name);
                 wrefresh(list_win);
                 napms(1500);
@@ -745,16 +777,12 @@ int main() {
             case 'r':
             case 'R':
                 restore_default();
-                mvwprintw(list_win, LINES-3, 2, "Restored: Default screensaver");
+                mvwprintw(list_win, LINES-2, 2, "Restored: Default screensaver");
                 wrefresh(list_win);
                 napms(1500);
                 break;
             default:
-                // Debug: Show unknown key codes
-                mvwprintw(list_win, LINES-3, 2, "Unknown key code: %d - Press Q to exit", ch);
-                wrefresh(list_win);
-                napms(1500);
-                break;
+                break;  // Remove debug output to reduce clutter
         }
     }
 
