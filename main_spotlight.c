@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     // Try taking screenshot using grim (Wayland screenshot tool)
     SDL_Surface *screenshot_surf = NULL;
     SDL_Log("Attempting screen capture...");
-    int grim_result = system("grim spotlight_temp.png 2>&1");
+    int grim_result = system("grim spotlight_temp.png > /dev/null 2>&1");
     if (grim_result == 0) {
         SDL_Log("Screen capture succeeded");
         screenshot_surf = IMG_Load("spotlight_temp.png");
@@ -114,7 +114,10 @@ int main(int argc, char *argv[]) {
 
     if (do_fullscreen) {
         // Make window fullscreen in Hyprland to hide the bar
-        system("hyprctl dispatch fullscreen > /dev/null 2>&1");
+        SDL_Delay(500); // Allow window to be mapped and settled
+        SDL_RaiseWindow(window); // Make the window active
+        SDL_Delay(100); // Allow focus
+        system("(hyprctl dispatch fullscreen > /dev/null 2>&1)");
     }
 
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -237,7 +240,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Exit fullscreen on quit to show Waybar immediately
-    system("hyprctl dispatch fullscreen > /dev/null 2>&1");
+    system("(hyprctl dispatch fullscreen > /dev/null 2>&1)");
     SDL_Delay(200); // Allow Hyprland to process fullscreen exit
 
     // Cleanup
