@@ -184,10 +184,24 @@ void restore_default();
 
 // Get executable path for screensaver
 char *get_screensaver_path(const char *name) {
-    static char path[512];
-    char build_dir[512];
-    snprintf(build_dir, sizeof(build_dir), "%s/.config/omarchy/branding/screensaver", getenv("HOME"));
-    snprintf(path, sizeof(path), "%s/%s", build_dir, name);
+    static char path[2048];
+    char build_dir[1024];
+    char *home = getenv("HOME");
+    if (home) {
+        int build_len = snprintf(build_dir, sizeof(build_dir), "%s/.config/omarchy/branding/screensaver", home);
+        if (build_len < (int)sizeof(build_dir) - 2) {  // -2 for safety with /
+            path[0] = '\0';
+            strncat(path, build_dir, sizeof(path) - 2);
+            strncat(path, "/", sizeof(path) - strlen(path) - 1);
+            strncat(path, name, sizeof(path) - strlen(path) - 1);
+        } else {
+            // Path too long - use fallback
+            strcpy(path, "/tmp/screensaver-fallback");
+        }
+    } else {
+        // Fallback if HOME not set
+        strcpy(path, "/tmp/screensaver-fallback");
+    }
     return path;
 }
 
@@ -730,7 +744,6 @@ int main() {
                     mouse_event.bstate & BUTTON1_CLICKED) {
 
                     // Calculate which item was clicked (relative to window)
-                    int rel_x = mouse_event.x - list_win_x;
                     int rel_y = mouse_event.y - list_win_y;
 
                     // Calculate which item was clicked
