@@ -17,9 +17,12 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <sys/stat.h>
+#include "assets/official_script.h"
 
 // Mouse event handling
 MEVENT mouse_event;
+
+// Official omarchy-cmd-screensaver content for restore default is now included from the header.
 
 // Script paths - use dynamic paths based on current user
 #define SCRIPT_PATH_ALTERNATE "$HOME/.config/omarchy/branding/screensaver/omarchy-cmd-screensaver"
@@ -283,11 +286,18 @@ void select_screensaver(int index) {
 }
 
 void restore_default() {
-    char cmd[1024];
     char script_path[512];
     snprintf(script_path, sizeof(script_path), "%s/.config/omarchy/branding/screensaver/omarchy-cmd-screensaver", getenv("HOME"));
-    snprintf(cmd, sizeof(cmd), "cp %s %s", get_backup_script_path(), script_path);
-    system(cmd);
+
+    FILE *fp = fopen(script_path, "w");
+    if (!fp) {
+        perror("Failed to restore default screensaver script");
+        return;
+    }
+
+    fprintf(fp, "%s", ORIGINAL_OFFICIAL_SCRIPT_CONTENT);
+    fclose(fp);
+    chmod(script_path, 0755);  // Make executable
 }
 
 void preview_screensaver(int index) {
@@ -544,7 +554,7 @@ void draw_menu(WINDOW *list_win, WINDOW *desc_win, int highlight) {
     }
 
     // Consolidate instructions to save space - include vim keys
-    mvwprintw(list_win, LINES-3, 2, "Nav: ↑↓hjkl PgUp/PgDn gg/G Ctrl+U/D | Select: ENTER (keyboard only) | Config: C | Preview: P | Restore: R | Quit: Q");
+    mvwprintw(list_win, LINES-3, 2, "Nav: ↑↓hjkl PgUp/PgDn gg/G Ctrl+U/D | Select: ENTER (keyboard only) | Config: C | Preview: P | Restore Default: R | Quit: Q");
 
     // Draw border last to avoid overwriting by clearing
     box(list_win, 0, 0);
