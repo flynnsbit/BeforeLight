@@ -237,8 +237,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Cleanup
-    // Restore fullscreen state to show Waybar
-    system("hyprctl dispatch fullscreen > /dev/null 2>&1");
+    // Window close will restore fullscreen state and show Waybar
     if (bg_tex) SDL_DestroyTexture(bg_tex);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
