@@ -203,7 +203,7 @@ void parse_starrynight_options(void) {
 void write_screensaver_script(const char *path, const char *options) {
     // Create directory if it doesn't exist
     char script_path_expanded[512];
-    snprintf(script_path_expanded, sizeof(script_path_expanded), "%s/.config/omarchy/branding/screensaver/omarchy-cmd-screensaver", getenv("HOME"));
+    snprintf(script_path_expanded, sizeof(script_path_expanded), "%s/.local/share/omarchy/bin/omarchy-cmd-screensaver", getenv("HOME"));
 
     char dirname[512];
     strcpy(dirname, script_path_expanded);
