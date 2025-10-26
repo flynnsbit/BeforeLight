@@ -699,15 +699,22 @@ int main() {
     WINDOW *list_win = newwin(max_y, list_width, 0, 0);
     WINDOW *desc_win = newwin(max_y, desc_width, 0, list_width + 1);
 
-    keypad(list_win, TRUE); // Enable special keys on the list window
+    keypad(stdscr, TRUE); // Enable special keys on stdscr for all input
+    keypad(list_win, TRUE);
     keypad(desc_win, TRUE);
-    nodelay(list_win, FALSE); // Blocking input
+
+    halfdelay(1); // Non-blocking input with 100ms timeout
 
     int ch;
     while (1) {
         draw_menu(list_win, desc_win, selected_index);
 
-        ch = wgetch(list_win);
+        ch = wgetch(stdscr);  // Get input from stdscr instead of list_win
+
+        // Handle ERR (timeout) - continue normally
+        if (ch == ERR) {
+            continue;
+        }
 
         // Handle mouse events
         if (ch == KEY_MOUSE) {
@@ -725,17 +732,17 @@ int main() {
                     }
 
                     // Convert mouse Y coordinate to item index
-                    int click_y = mouse_event.y - 2;  // Subtract top padding
-                    if (click_y >= 0 && click_y < max_visible) {
-                        int clicked_item = start_idx + click_y;
+                    int click_y = mouse_event.y - 1;  // Subtract title padding (changed from 2 to 1)
+                    if (click_y >= 1 && click_y <= max_visible) {  // Adjusted range (1-based, title is at y=1)
+                        int clicked_item = start_idx + (click_y - 1);  // -1 because y starts at 1 (title)
                         if (clicked_item >= 0 && clicked_item < (int)NUM_SAVERS) {
                             selected_index = clicked_item;
-                            ch = '\n';  // Simulate enter key for selection
+                            // Don't simulate enter - just move selection
                         }
                     }
                 }
             }
-            continue;  // Skip normal key processing for mouse events
+            // Don't continue - allow normal key processing to proceed
         }
 
         switch (ch) {
