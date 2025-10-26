@@ -18,10 +18,20 @@
 #include <signal.h>
 #include <sys/stat.h>
 
-// Script path
-#define SCRIPT_PATH "/home/shawn/.local/share/omarchy/bin/omarchy-cmd-screensaver"
-#define BACKUP_SCRIPT SCRIPT_PATH ".backup"
-#define BUILD_DIR "/home/shawn/Projects/BeforeLight/build"
+// Script paths - use dynamic paths based on current user
+#define SCRIPT_PATH_ALTERNATE "$HOME/.config/omarchy/branding/screensaver/omarchy-cmd-screensaver"
+
+// Function to get backup script path
+char *get_backup_script_path() {
+    static char path[512];
+    char *home = getenv("HOME");
+    if (home) {
+        snprintf(path, sizeof(path), "%s/.cache/omarchy-screensaver-backup", home);
+    } else {
+        strcpy(path, "/tmp/omarchy-screensaver-backup"); // fallback
+    }
+    return path;
+}
 
 // Screensaver catalog
 typedef struct {
@@ -172,7 +182,9 @@ void restore_default();
 // Get executable path for screensaver
 char *get_screensaver_path(const char *name) {
     static char path[512];
-    snprintf(path, sizeof(path), "%s/%s", BUILD_DIR, name);
+    char build_dir[512];
+    snprintf(build_dir, sizeof(build_dir), "%s/.config/omarchy/branding/screensaver", getenv("HOME"));
+    snprintf(path, sizeof(path), "%s/%s", build_dir, name);
     return path;
 }
 
@@ -189,7 +201,19 @@ void parse_starrynight_options(void) {
 }
 
 void write_screensaver_script(const char *path, const char *options) {
-    FILE *fp = fopen(SCRIPT_PATH, "w");
+    // Create directory if it doesn't exist
+    char script_path_expanded[512];
+    snprintf(script_path_expanded, sizeof(script_path_expanded), "%s/.config/omarchy/branding/screensaver/omarchy-cmd-screensaver", getenv("HOME"));
+
+    char dirname[512];
+    strcpy(dirname, script_path_expanded);
+    char *last_slash = strrchr(dirname, '/');
+    if (last_slash) {
+        *last_slash = '\0';
+        mkdir(dirname, 0755);  // Create directory if it doesn't exist
+    }
+
+    FILE *fp = fopen(script_path_expanded, "w");
     if (!fp) {
         perror("Failed to write screensaver script");
         return;
@@ -236,7 +260,7 @@ void write_screensaver_script(const char *path, const char *options) {
     fprintf(fp, "done\n");
 
     fclose(fp);
-    chmod(SCRIPT_PATH, 0755);
+    chmod(script_path_expanded, 0755);
 }
 
 void select_screensaver(int index) {
@@ -263,7 +287,9 @@ void select_screensaver(int index) {
 
 void restore_default() {
     char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "cp %s %s", BACKUP_SCRIPT, SCRIPT_PATH);
+    char script_path[512];
+    snprintf(script_path, sizeof(script_path), "%s/.config/omarchy/branding/screensaver/omarchy-cmd-screensaver", getenv("HOME"));
+    snprintf(cmd, sizeof(cmd), "cp %s %s", get_backup_script_path(), script_path);
     system(cmd);
 }
 
@@ -601,15 +627,16 @@ int main() {
     setlocale(LC_ALL, "");
 
     // Check if backup script exists, download official if not
-    if (!file_exists(BACKUP_SCRIPT)) {
+    char *backup_script_path = get_backup_script_path();
+    if (!file_exists(backup_script_path)) {
         printf("Downloading official omarchy screensaver backup...\n");
         char cmd[1024];
         snprintf(cmd, sizeof(cmd),
                  "curl -s https://raw.githubusercontent.com/basecamp/omarchy/refs/heads/master/bin/omarchy-cmd-screensaver -o %s",
-                 BACKUP_SCRIPT);
+                 backup_script_path);
         system(cmd);
 
-        if (!file_exists(BACKUP_SCRIPT)) {
+        if (!file_exists(backup_script_path)) {
             printf("Error: Failed to download official screensaver backup!\n");
             return 1;
         } else {
@@ -638,9 +665,11 @@ int main() {
     #define COLS max_x
 
     // Verify build directory exists
-    if (!file_exists(BUILD_DIR)) {
+    char build_dir_expanded[512];
+    snprintf(build_dir_expanded, sizeof(build_dir_expanded), "%s/.config/omarchy/branding/screensaver", getenv("HOME"));
+    if (!file_exists(build_dir_expanded)) {
         endwin();
-        printf("Error: Build directory not found: %s\n", BUILD_DIR);
+        printf("Error: Build directory not found: %s\n", build_dir_expanded);
         return 1;
     }
 
