@@ -56,6 +56,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+
+
     // Try taking screenshot using grim (Wayland screenshot tool)
     SDL_Surface *screenshot_surf = NULL;
     SDL_Log("Attempting screen capture...");
@@ -108,6 +110,11 @@ int main(int argc, char *argv[]) {
         IMG_Quit();
         SDL_Quit();
         return 1;
+    }
+
+    if (do_fullscreen) {
+        // Make window fullscreen in Hyprland to hide the bar
+        system("hyprctl dispatch fullscreen");
     }
 
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
