@@ -13,6 +13,9 @@
 #include <stdbool.h>
 #include <time.h>
 #include <math.h>
+#include <unistd.h> // for getopt
+
+extern char *optarg;
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
@@ -36,6 +39,13 @@
 
 #define WINDOW_SPACING 10
 
+static void usage(const char *prog) {
+    fprintf(stderr, "Usage: %s [options]\n", prog);
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -f 0|1  Windowed (0) or fullscreen (1) mode (default: fullscreen)\n");
+    fprintf(stderr, "  -h      Show this help\n");
+}
+
 typedef struct {
     int x, y;          // Bottom-left corner position
     int width, height; // Building dimensions
@@ -53,6 +63,22 @@ void render(SDL_Renderer *renderer, Building *buildings);
  * Main program entry point
  */
 int main(int argc, char *argv[]) {
+    int opt;
+    int do_fullscreen = 1;
+
+    while ((opt = getopt(argc, argv, "f:h")) != -1) {
+        switch (opt) {
+            case 'f':
+                do_fullscreen = atoi(optarg);
+                break;
+            case 'h':
+            default:
+                usage(argv[0]);
+                return EXIT_FAILURE;
+        }
+    }
+
+    setenv("SDL_VIDEODRIVER", "wayland", 1); // Force Wayland for Hyprland
     srand((unsigned int)time(NULL));
 
     // Initialize SDL
@@ -89,6 +115,12 @@ int main(int argc, char *argv[]) {
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
+    }
+
+    if (do_fullscreen) {
+        if (SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) != 0) {
+            fprintf(stderr, "Warning: Failed to set fullscreen: %s\n", SDL_GetError());
+        }
     }
 
     // Initialize buildings
