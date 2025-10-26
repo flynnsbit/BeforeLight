@@ -567,7 +567,7 @@ void draw_menu(WINDOW *list_win, WINDOW *desc_win, int highlight) {
     box(desc_win, 0, 0);
     char desc_header[80];
     const char *config_status = savers[highlight].options[0] ? " [CONFIGURED]" : "";
-    snprintf(desc_header, sizeof(desc_header), "%s %s %s - Description",
+    snprintf(desc_header, sizeof(desc_header), "%s %s %s",
              savers[highlight].emoji, savers[highlight].name, savers[highlight].type);
     mvwprintw(desc_win, 0, 2, "%s%s", desc_header, config_status);
 
