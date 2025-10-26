@@ -148,7 +148,7 @@ Screensaver savers[] = {
      "Implementation of Conway's Game of Life.\n\nMathematical cellular automata that evolve\naccording to simple life rules.",
      ""},
     {"logo",
-     "�",
+     "🏷️",
      "Logo Display",
      "Static or animated brand logo presentation.\n\nCompany branding display with customizable\nstatic or animated visual elements.",
      ""},
@@ -158,7 +158,7 @@ Screensaver savers[] = {
      "Physics-based bouncing ball animation.\n\nRealistic gravity simulation with momentum\nand collision effects across display area.",
      ""},
     {"warp",
-     "�🌊",
+     "💫🌊",
      "Warp Effects",
      "Fluid distortion and liquid warping effects.\n\nPsychedelic surface distortions with organic\nmovement patterns and wave-like animations.",
      ""}

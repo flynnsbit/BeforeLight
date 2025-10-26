@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h> // for getopt
+#include "assets/star1.h"
+#include "assets/star2.h"
+#include "assets/star3.h"
+#include "assets/star4.h"
 
 #define PI 3.14159f
 
@@ -39,6 +43,9 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
         }
     }
+
+    setenv("SDL_VIDEODRIVER", "wayland", 1); // Force Wayland for Hyprland
+    srand((unsigned int)time(NULL));
 
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -78,14 +85,47 @@ int main(int argc, char *argv[]) {
     int W, H;
     SDL_GetRendererOutputSize(renderer, &W, &H);
 
-    // Load star textures
+    // Load star textures from embedded assets
     SDL_Texture *star_texs[4];
     for (int i = 0; i < 4; i++) {
-        char path[20];
-        sprintf(path, "../img/stars%d.png", i + 1);
-        SDL_Surface *surf = IMG_Load(path);
+        const unsigned char *data;
+        unsigned int len;
+
+        // Select the appropriate star texture data
+        switch (i + 1) {
+            case 1:
+                data = star1;
+                len = star1_len;
+                break;
+            case 2:
+                data = star2;
+                len = star2_len;
+                break;
+            case 3:
+                data = star3;
+                len = star3_len;
+                break;
+            case 4:
+                data = star4;
+                len = star4_len;
+                break;
+            default:
+                data = star1;
+                len = star1_len;
+        }
+
+        SDL_RWops *rw = SDL_RWFromConstMem(data, len);
+        if (!rw) {
+            SDL_Log("Error creating RWops for embedded star%d texture: %s", i + 1, SDL_GetError());
+            SDL_DestroyRenderer(renderer);
+            SDL_DestroyWindow(window);
+            IMG_Quit();
+            SDL_Quit();
+            return 1;
+        }
+        SDL_Surface *surf = IMG_Load_RW(rw, 1); // 1 to autoclose RWops
         if (!surf) {
-            SDL_Log("Error loading %s: %s", path, IMG_GetError());
+            SDL_Log("Error loading embedded star%d texture: %s", i + 1, IMG_GetError());
             SDL_DestroyRenderer(renderer);
             SDL_DestroyWindow(window);
             IMG_Quit();
