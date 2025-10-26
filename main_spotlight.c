@@ -42,6 +42,9 @@ int main(int argc, char *argv[]) {
 
     srand(time(NULL));
 
+    // Set render quality to nearest for pixel-perfect scaling
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         SDL_Log("SDL_Init Error: %s", SDL_GetError());
         return 1;
@@ -145,7 +148,7 @@ int main(int argc, char *argv[]) {
     SDL_FreeSurface(screenshot_surf);
 
     // Spotlight properties
-    float radius = 120.0f;
+    float radius = 200.0f;
 
     // Geometry setup for circular spotlight
     const int segments = 64; // more segments for smoother circle
