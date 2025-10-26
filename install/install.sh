@@ -27,17 +27,9 @@ sudo pacman -S --needed --noconfirm \
     ttf-liberation \
     gnu-free-fonts \
     libx11 \
-    ncurses \
-    gcc \
-    make
+    ncurses
 
 echo "✅ Dependencies installed successfully!"
-
-echo "🔨 Building BeforeLight screensavers..."
-make clean
-make all
-
-echo "✅ Compilation completed!"
 
 # Create the Omarchy screensaver directory
 SCREEN_DIR="$HOME/.config/omarchy/branding/screensaver"
@@ -46,12 +38,13 @@ mkdir -p "$SCREEN_DIR"
 
 echo "📋 Copying screensavers to Omarchy directory..."
 
-# Copy all compiled screensavers
-cp build/* "$SCREEN_DIR" 2>/dev/null || {
-    echo "❌ Error: No compiled screensavers found in build/ directory"
-    echo "Make sure the compilation was successful."
-    exit 1
-}
+# Copy all screensavers from the install directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+for binary in "$SCRIPT_DIR"/*; do
+    if [[ -f "$binary" && -x "$binary" && "$binary" != "$SCRIPT_DIR/install.sh" ]]; then
+        cp "$binary" "$SCREEN_DIR/"
+    fi
+done
 
 echo "✅ Installation completed successfully!"
 echo ""
