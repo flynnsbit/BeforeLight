@@ -154,14 +154,41 @@
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Linux/macOS (or WSL)
-- SDL2 development libraries
+- Linux (Ubuntu, Arch, or distributions with SDL2 support)
 - GCC compiler
+- SDL2 development libraries with additional components:
+  - SDL2 (core graphics)
+  - SDL2_image (for PNG/GIF textures)
+  - SDL2_ttf (for text-based screensavers: matrix, messages, messages2, randomizer)
+- X11 libraries (for screen capture screensavers: spotlight, fadeout)
+- ncurses (for configuration tool)
+- Monospace fonts (DejaVu Sans Mono, Liberation Mono, or FreeMono for matrix screensaver)
 
+#### Ubuntu/Debian Installation
 ```bash
-# Ubuntu/Debian dependencies
-sudo apt-get install libsdl2-dev libsdl2-image-dev libsdl2-gfx-dev
+sudo apt-get install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libx11-dev libncurses-dev
+# Font packages (for matrix screensaver)
+sudo apt-get install fonts-dejavu fonts-liberation fonts-freefont-ttf
 ```
+
+#### Arch Linux Installation
+```bash
+# Base dependencies (required for all screensavers)
+sudo pacman -S sdl2 sdl2_image
+
+# Text rendering (required for matrix, messages, messages2, randomizer)
+sudo pacman -S sdl2_ttf ttf-dejavu ttf-liberation gnu-free-fonts
+
+# Screen capture (required for spotlight, fadeout screensavers)
+sudo pacman -S libx11
+
+# Configuration tool
+sudo pacman -S ncurses
+```
+
+**Platform Notes:**
+- The matrix screensaver requires monospace fonts. Install at least one of: `ttf-dejavu` (recommended), `ttf-liberation`, or `gnu-free-fonts`.
+- Screen capture screensavers (spotlight, fadeout) require X11 and won't work on pure Wayland systems like Hyprland without Xwayland compatibility layer.
 
 ### Build All
 ```bash
