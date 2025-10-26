@@ -563,8 +563,8 @@ void draw_menu(WINDOW *list_win, WINDOW *desc_win, int highlight) {
         if (i == highlight) wattroff(list_win, A_REVERSE);
     }
 
-    // Consolidate instructions to save space
-    mvwprintw(list_win, LINES-3, 2, "Nav: ↑↓, PgUp/PgDn | Select: ENTER (mouse may not work in Wayland) | Config: C | Preview: P | Restore: R | Quit: Q");
+    // Consolidate instructions to save space - include vim keys
+    mvwprintw(list_win, LINES-3, 2, "Nav: ↑↓hjkl PgUp/PgDn gg/G Ctrl+U/D | Select: ENTER (keyboard only) | Config: C | Preview: P | Restore: R | Quit: Q");
 
     // Draw border last to avoid overwriting by clearing
     box(list_win, 0, 0);
