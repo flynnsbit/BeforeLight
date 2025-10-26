@@ -1,0 +1,6 @@
+- [x] Comment out gap stars allocation in main() function
+- [x] Comment out gap stars initialization loop in main() function
+- [x] Comment out gap stars update call in animation loop
+- [x] Comment out gap stars rendering call in render loop
+- [x] Adjust rotation speed for subtle screensaver movement (30x speed - full rotation ~28.7 minutes)
+- [x] Compile and verify clean build - SUCCESS with no warnings/errors
