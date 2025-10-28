@@ -395,6 +395,9 @@ int main(int argc, char *argv[]) {
         SDL_Delay(16); // ~60fps
     }
 
+    // Cleanup - restore cursor visibility
+    system("hyprctl keyword cursor:invisible false 2>/dev/null");
+
     // Cleanup
     SDL_DestroyTexture(toaster_tex);
     for (int i = 0; i < 4; i++) {

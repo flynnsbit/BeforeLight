@@ -110,6 +110,9 @@ int main(int argc, char *argv[]) {
     // Normalize loop time (50 second cycle as per CSS)
     const float cycle_time = 50.0f;
 
+    // Hide cursor during screensaver
+    system("hyprctl keyword cursor:invisible true &>/dev/null");
+
     // Main loop
     SDL_Event e;
     int quit = 0;
@@ -173,6 +176,9 @@ int main(int argc, char *argv[]) {
         SDL_RenderPresent(renderer);
         SDL_Delay(16); // ~60fps
     }
+
+    // Cleanup - restore cursor visibility
+    system("hyprctl keyword cursor:invisible false 2>/dev/null");
 
     // Cleanup
     SDL_DestroyTexture(logo_tex);
