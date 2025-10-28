@@ -139,14 +139,24 @@ int main(int argc, char *argv[]) {
     float animation_time = 0;
     const float paper_appear_time = 2.0f;     // Paper fades in
 
+    // Hide cursor during screensaver
+    system("hyprctl keyword cursor:invisible true &>/dev/null");
+
     // Main loop
     SDL_Event e;
     int quit = 0;
+    Uint32 start_time = SDL_GetTicks();
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT || e.type == SDL_KEYDOWN || e.type == SDL_MOUSEBUTTONDOWN) {
                 quit = 1;
+            } else if (e.type == SDL_MOUSEMOTION) {
+                // Only quit on mouse motion after 2 seconds to prevent immediate quit
+                Uint32 current_time = SDL_GetTicks();
+                if ((current_time - start_time) > 2000) { // 2 second grace period
+                    quit = 1;
+                }
             }
         }
 
@@ -360,6 +370,9 @@ int main(int argc, char *argv[]) {
             fire_sys.fire_intensity[FIRE_GRID_SIZE/2][FIRE_GRID_SIZE-5] = 0.6f;
         }
     }
+
+    // Cleanup - restore cursor visibility
+    system("hyprctl keyword cursor:invisible false 2>/dev/null");
 
     // Cleanup
     SDL_DestroyTexture(paper_tex);

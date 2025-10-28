@@ -161,15 +161,25 @@ int main(int argc, char *argv[]) {
         streams[i].brightness[0] = 255;
     }
 
+    // Hide cursor during screensaver
+    system("hyprctl keyword cursor:invisible true &>/dev/null");
+
     // Main loop
     SDL_Event e;
     int quit = 0;
     Uint32 last_time = SDL_GetTicks();
+    Uint32 start_time = SDL_GetTicks();
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT || e.type == SDL_KEYDOWN || e.type == SDL_MOUSEBUTTONDOWN) {
                 quit = 1;
+            } else if (e.type == SDL_MOUSEMOTION) {
+                // Only quit on mouse motion after 2 seconds to prevent immediate quit
+                Uint32 current_time = SDL_GetTicks();
+                if ((current_time - start_time) > 2000) { // 2 second grace period
+                    quit = 1;
+                }
             }
         }
 
@@ -271,6 +281,9 @@ int main(int argc, char *argv[]) {
         SDL_RenderPresent(renderer);
         SDL_Delay(16); // ~60fps
     }
+
+    // Cleanup - restore cursor visibility
+    system("hyprctl keyword cursor:invisible false 2>/dev/null");
 
     // Cleanup
     TTF_CloseFont(font);

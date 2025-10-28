@@ -171,6 +171,17 @@ int main(int argc, char *argv[]) {
                     waitpid(child_pid, &status, 0);
                 }
                 goto cleanup;
+            } else if (e.type == SDL_MOUSEMOTION) {
+                // Only quit on mouse motion after 2 seconds to prevent immediate quit
+                Uint32 current_time = SDL_GetTicks();
+                if ((current_time - start_time) > 2000) { // 2 second grace period
+                    if (running_child) {
+                        kill(child_pid, SIGTERM);
+                        int status;
+                        waitpid(child_pid, &status, 0);
+                    }
+                    goto cleanup;
+                }
             }
         }
 
