@@ -165,7 +165,15 @@ int main(int argc, char *argv[]) {
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT || e.type == SDL_KEYDOWN || e.type == SDL_MOUSEBUTTONDOWN) {
+                SDL_Log("Screensaver quit triggered: event type %d", e.type);
                 quit = 1;
+            } else if (e.type == SDL_MOUSEMOTION) {
+                // Only quit on mouse motion after 2 seconds to prevent immediate quit
+                Uint32 current_time = SDL_GetTicks();
+                if ((current_time - start_time) > 2000) { // 2 second grace period
+                    SDL_Log("Screensaver quit triggered: mouse motion after grace period");
+                    quit = 1;
+                }
             }
         }
 
