@@ -188,6 +188,10 @@ int main(int argc, char *argv[]) {
         // Calculate fade amount (0 = fully visible, 255 = fully black)
         float fade_amount = fade_progress * 255.0f;
 
+        // Clear renderer to black each frame
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+
         // Draw background texture first (if available)
         if (bg_tex) {
             SDL_RenderCopy(renderer, bg_tex, NULL, NULL);
