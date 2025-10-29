@@ -246,6 +246,9 @@ int main(int argc, char *argv[]) {
     bubble_tex = SDL_CreateTextureFromSurface(renderer, surf);
     SDL_FreeSurface(surf);
 
+    // Hide cursor during screensaver
+    system("hyprctl keyword cursor:invisible true &>/dev/null");
+
     // Main loop
     SDL_Event e;
     int quit = 0;
@@ -369,6 +372,9 @@ int main(int argc, char *argv[]) {
         SDL_RenderPresent(renderer);
         SDL_Delay(16); // ~60fps
     }
+
+    // Cleanup - restore cursor visibility
+    system("hyprctl keyword cursor:invisible false 2>/dev/null");
 
     // Cleanup
     for (int i = 0; i < 10; i++) {
