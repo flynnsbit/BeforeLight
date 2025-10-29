@@ -151,9 +151,6 @@ int main(int argc, char *argv[]) {
     }
     SDL_FreeSurface(screenshot_surf);
 
-    // Simple fade-to-black effect parameters
-    // No additional parameters needed - just fade the whole screen
-
     // Hide cursor during screensaver
     system("hyprctl keyword cursor:invisible true &>/dev/null");
 
@@ -161,7 +158,6 @@ int main(int argc, char *argv[]) {
     SDL_Event e;
     int quit = 0;
     Uint32 start_time = SDL_GetTicks();
-    float fade_progress = 0;
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -181,34 +177,34 @@ int main(int argc, char *argv[]) {
         Uint32 current_time = SDL_GetTicks();
         float time_s = (current_time - start_time) / 1000.0f;
 
-        // Simple screen-wide fade to black (takes about 5 seconds to complete at normal speed)
-        fade_progress = (time_s * speed_mult) / 5.0f;
-        if (fade_progress > 1) fade_progress = 1;
+        // Calculate fade cycle: 10 seconds total (5 seconds fade in, 5 seconds fade out)
+        float cycle_time = fmodf(time_s, 10.0f); // 10 second cycle
+        float fade_amount;
 
-        // Calculate fade amount (0 = fully visible, 255 = fully black)
-        float fade_amount = fade_progress * 255.0f;
+        if (cycle_time < 5.0f) {
+            // First 5 seconds: fade in from transparent (0) to fully black (255)
+            fade_amount = (cycle_time / 5.0f) * 255.0f;
+        } else {
+            // Second 5 seconds: fade out from fully black (255) to transparent (0)
+            fade_amount = ((10.0f - cycle_time) / 5.0f) * 255.0f;
+        }
 
         // Clear renderer to black each frame
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        // Draw background texture first (if available)
+        // Draw background texture first
         if (bg_tex) {
             SDL_RenderCopy(renderer, bg_tex, NULL, NULL);
         }
 
-        // Draw black overlay that fades in from transparent to opaque
+        // Draw full-screen black overlay with alpha blending (like spotlight)
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, (Uint8)fade_amount);
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
         SDL_RenderFillRect(renderer, NULL);
 
         SDL_RenderPresent(renderer);
         SDL_Delay(16); // ~60fps
-
-        // Restart animation when complete (continuous loop)
-        if (fade_progress >= 1.0f) {
-            start_time = SDL_GetTicks(); // Reset for next cycle
-            fade_progress = 0;
-        }
     }
 
     // Exit fullscreen on quit to show Waybar immediately
