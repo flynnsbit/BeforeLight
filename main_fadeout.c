@@ -1,10 +1,9 @@
 #include <SDL.h>
 #include <SDL_image.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
 #include <math.h>
 #include <time.h>
 #include <unistd.h> // for getopt
+#include "assets/omarchy_logo.h"
 
 extern char *optarg;
 
@@ -16,13 +15,6 @@ static void usage(const char *prog) {
     fprintf(stderr, "  -s F    Speed multiplier (default: 1.0)\n");
     fprintf(stderr, "  -f 0|1  Fullscreen (1=yes, 0=windowed) (default: 1)\n");
     fprintf(stderr, "  -h      Show this help\n");
-}
-
-int x_error_handler(Display *display, XErrorEvent *error) {
-    // Ignore X errors and continue
-    (void)display; // Suppress unused parameter warning
-    (void)error;   // Suppress unused parameter warning
-    return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -60,75 +52,28 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Take screenshot before creating window
-    Display *display = XOpenDisplay(NULL);
-    if (!display) {
-        SDL_Log("Cannot open X display for screenshot");
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
-    }
-
-    Screen *screen = DefaultScreenOfDisplay(display);
-    int screen_num = DefaultScreen(display);
-    Window root = RootWindow(display, screen_num);
-    int screen_width = WidthOfScreen(screen);
-    int screen_height = HeightOfScreen(screen);
-
-    // Change to img directory first to load fallback
-    chdir("..");
-    chdir("img");
-
-    // Set custom error handler to prevent X errors from killing the program
-    XSetErrorHandler(x_error_handler);
-
+    // Try taking screenshot using grim (Wayland screenshot tool)
     SDL_Surface *screenshot_surf = NULL;
-    XImage *ximg = XGetImage(display, root, 0, 0, screen_width, screen_height, AllPlanes, ZPixmap);
-    if (!ximg) {
-        // Try fallback with different visual
-        ximg = XGetImage(display, root, 0, 0, screen_width, screen_height, AllPlanes, XYPixmap);
-    }
-    if (ximg) {
-        // Create SDL surface from XImage
-        screenshot_surf = SDL_CreateRGBSurface(0, screen_width, screen_height, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
-        if (screenshot_surf) {
-            // Copy pixel data from XImage to SDL surface
-            for (int y = 0; y < screen_height; y++) {
-                for (int x = 0; x < screen_width; x++) {
-                    unsigned long pixel = XGetPixel(ximg, x, y);
-                    unsigned char r = (pixel >> 16) & 0xff;
-                    unsigned char g = (pixel >> 8) & 0xff;
-                    unsigned char b = pixel & 0xff;
-                    Uint32 color = SDL_MapRGB(screenshot_surf->format, r, g, b);
-                    ((Uint32*)screenshot_surf->pixels)[y * screenshot_surf->w + x] = color;
-                }
-            }
-        }
-        XDestroyImage(ximg);
+    SDL_Log("Attempting screen capture...");
+    int grim_result = system("grim fadeout_temp.png > /dev/null 2>&1");
+    if (grim_result == 0) {
+        SDL_Log("Screen capture succeeded");
+        screenshot_surf = IMG_Load("fadeout_temp.png");
+        unlink("fadeout_temp.png");
     } else {
-        SDL_Log("Cannot capture screen, creating gradient background");
-        // Create a fallback surface with gradient if capture fails
-        screenshot_surf = SDL_CreateRGBSurface(0, 800, 600, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
-        if (screenshot_surf) {
-            // Fill with radial gradient for demonstration
-            float center_x = 400, center_y = 300;
-            for (int y = 0; y < 600; y++) {
-                for (int x = 0; x < 800; x++) {
-                    float dist = sqrtf((x - center_x)*(x - center_x) + (y - center_y)*(y - center_y));
-                    float factor = 1.0f - dist / sqrtf(center_x*center_x + center_y*center_y);
-                    if (factor < 0) factor = 0;
-                    if (factor > 1) factor = 1;
-                    unsigned char r = (unsigned char)(factor * 100);
-                    unsigned char g = (unsigned char)(factor * 150);
-                    unsigned char b = (unsigned char)(factor * 200);
-                    Uint32 color = SDL_MapRGB(screenshot_surf->format, r, g, b);
-                    ((Uint32*)screenshot_surf->pixels)[y * 800 + x] = color;
-                }
-            }
-        }
+        SDL_Log("Screen capture failed (exit code %d)", grim_result);
     }
 
-    XCloseDisplay(display);
+    if (!screenshot_surf) {
+        SDL_Log("Cannot capture screen, using embedded Omarchy logo as fallback");
+        SDL_RWops *rw = SDL_RWFromMem(omarchy_logo, omarchy_logo_len);
+        if (rw) {
+            screenshot_surf = IMG_Load_RW(rw, 1);  // 1 to auto-close rw
+        }
+        if (!screenshot_surf) {
+            SDL_Log("Failed to load embedded logo: %s", IMG_GetError());
+        }
+    }
 
     if (!screenshot_surf) {
         SDL_Log("No background available");
@@ -137,14 +82,37 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    Uint32 flags = SDL_WINDOW_SHOWN;
+    int win_w = 800;
+    int win_h = 600;
+    int win_x = SDL_WINDOWPOS_UNDEFINED;
+    int win_y = SDL_WINDOWPOS_UNDEFINED;
+    SDL_Rect bounds = {0};
+    if (do_fullscreen) {
+        flags |= SDL_WINDOW_BORDERLESS;
+        SDL_GetDisplayBounds(0, &bounds); // assume display 0
+        win_w = bounds.w;
+        win_h = bounds.h;
+        win_x = bounds.x;
+        win_y = bounds.y;
+    }
+
     // Now create window
-    SDL_Window *window = SDL_CreateWindow("Fade Out", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
+    SDL_Window *window = SDL_CreateWindow("Fade Out", win_x, win_y, win_w, win_h, flags);
     if (window == NULL) {
         SDL_Log("SDL_CreateWindow Error: %s", SDL_GetError());
         SDL_FreeSurface(screenshot_surf);
         IMG_Quit();
         SDL_Quit();
         return 1;
+    }
+
+    if (do_fullscreen) {
+        // Make window fullscreen in Hyprland to hide the bar
+        SDL_Delay(500); // Allow window to be mapped and settled
+        SDL_RaiseWindow(window); // Make the window active
+        SDL_Delay(100); // Allow focus
+        system("(hyprctl dispatch fullscreen > /dev/null 2>&1)");
     }
 
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -157,14 +125,20 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (do_fullscreen) {
-        if (SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) != 0) {
-            SDL_Log("Warning: Failed to set fullscreen: %s", SDL_GetError());
-        }
-    }
-
     int W, H;
-    SDL_GetRendererOutputSize(renderer, &W, &H);
+    if (do_fullscreen) {
+        int display = SDL_GetWindowDisplayIndex(window);
+        SDL_Rect bounds;
+        SDL_GetDisplayBounds(display, &bounds);
+        W = bounds.w;
+        H = bounds.h;
+        SDL_Log("Fullscreen display size: W=%d H=%d", W, H);
+        // Set logical renderer size to match display
+        SDL_RenderSetLogicalSize(renderer, W, H);
+    } else {
+        SDL_GetRendererOutputSize(renderer, &W, &H);
+        SDL_Log("Renderer size: W=%d H=%d", W, H);
+    }
 
     // Create texture from screenshot
     SDL_Texture *bg_tex = SDL_CreateTextureFromSurface(renderer, screenshot_surf);
@@ -184,6 +158,9 @@ int main(int argc, char *argv[]) {
     float hole_x = W / 2.0f, hole_y = H / 2.0f; // Center of screen
     max_radius = sqrtf(W*W/4.0f + H*H/4.0f) + 50; // Diagonal + margin
 
+    // Hide cursor during screensaver
+    system("hyprctl keyword cursor:invisible true &>/dev/null");
+
     // Main loop
     SDL_Event e;
     int quit = 0;
@@ -193,7 +170,15 @@ int main(int argc, char *argv[]) {
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT || e.type == SDL_KEYDOWN || e.type == SDL_MOUSEBUTTONDOWN) {
+                SDL_Log("Screensaver quit triggered: event type %d", e.type);
                 quit = 1;
+            } else if (e.type == SDL_MOUSEMOTION) {
+                // Only quit on mouse motion after 2 seconds to prevent immediate quit
+                Uint32 current_time = SDL_GetTicks();
+                if ((current_time - start_time) > 2000) { // 2 second grace period
+                    SDL_Log("Screensaver quit triggered: mouse motion after grace period");
+                    quit = 1;
+                }
             }
         }
 
@@ -292,6 +277,13 @@ int main(int argc, char *argv[]) {
             fade_progress = 0;
         }
     }
+
+    // Exit fullscreen on quit to show Waybar immediately
+    system("(hyprctl dispatch fullscreen > /dev/null 2>&1)");
+    SDL_Delay(200); // Allow Hyprland to process fullscreen exit
+
+    // Cleanup - restore cursor visibility
+    system("hyprctl keyword cursor:invisible false 2>/dev/null");
 
     // Cleanup
     if (bg_tex) SDL_DestroyTexture(bg_tex);
