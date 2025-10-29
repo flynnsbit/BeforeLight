@@ -7,8 +7,6 @@
 
 extern char *optarg;
 
-#define PI 3.14159f
-
 static void usage(const char *prog) {
     fprintf(stderr, "Usage: %s [options]\n", prog);
     fprintf(stderr, "Options:\n");
@@ -153,10 +151,8 @@ int main(int argc, char *argv[]) {
     }
     SDL_FreeSurface(screenshot_surf);
 
-    // Fade out parameters
-    float max_radius;           // Maximum radius needed to cover screen
-    float hole_x = W / 2.0f, hole_y = H / 2.0f; // Center of screen
-    max_radius = sqrtf(W*W/4.0f + H*H/4.0f) + 50; // Diagonal + margin
+    // Simple fade-to-black effect parameters
+    // No additional parameters needed - just fade the whole screen
 
     // Hide cursor during screensaver
     system("hyprctl keyword cursor:invisible true &>/dev/null");
@@ -185,88 +181,21 @@ int main(int argc, char *argv[]) {
         Uint32 current_time = SDL_GetTicks();
         float time_s = (current_time - start_time) / 1000.0f;
 
-        // Fade progress (takes about 5 seconds to complete at normal speed)
+        // Simple screen-wide fade to black (takes about 5 seconds to complete at normal speed)
         fade_progress = (time_s * speed_mult) / 5.0f;
         if (fade_progress > 1) fade_progress = 1;
 
-        // Calculate current hole radius based on progress
-        // Exponential growth for black hole effect
-        float radius_progress = fade_progress * fade_progress * fade_progress; // Cubic for slower start, faster end
-        float current_radius = 10.0f + radius_progress * (max_radius - 10.0f);
+        // Calculate fade amount (0 = fully visible, 255 = fully black)
+        float fade_amount = fade_progress * 255.0f;
 
-        // Also fade the overall screen to black as radius grows
-        float screen_fade = radius_progress * 255.0f;
-
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-
-        // Draw background texture
+        // Draw background texture first (if available)
         if (bg_tex) {
-            SDL_SetTextureAlphaMod(bg_tex, (Uint8)(255 - screen_fade)); // Fade background inverse to black hole
             SDL_RenderCopy(renderer, bg_tex, NULL, NULL);
         }
 
-        // Draw black hole (large filled circle)
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-
-        // Draw multiple concentric circles for smoother black hole
-        int steps = (int)current_radius / 3;
-        for (int i = 0; i <= steps; i++) {
-            float r = (float)i * 3;
-            if (r > current_radius) r = current_radius;
-
-            int num_segments = 32 + i * 2; // More segments for larger circles
-            if (num_segments > 128) num_segments = 128;
-
-            // Draw filled circle using triangles
-            for (int seg = 0; seg < num_segments; seg++) {
-                float angle1 = seg * (2 * PI) / num_segments;
-                float angle2 = (seg + 1) * (2 * PI) / num_segments;
-
-                float x1 = hole_x + r * cosf(angle1);
-                float y1 = hole_y + r * sinf(angle1);
-                float x2 = hole_x + r * cosf(angle2);
-                float y2 = hole_y + r * sinf(angle2);
-
-                SDL_RenderDrawLine(renderer, (int)hole_x, (int)hole_y, (int)x1, (int)y1);
-                SDL_RenderDrawLine(renderer, (int)x1, (int)y1, (int)x2, (int)y2);
-            }
-        }
-
-        // Add some dynamic elements near the black hole edge
-        if (current_radius < max_radius * 0.8f) {
-            SDL_SetRenderDrawColor(renderer, 50, 50, 50, 100); // Dark gray tendrils
-
-            // Draw some tendrils curving toward the black hole
-            int num_tendrils = 8;
-            for (int i = 0; i < num_tendrils; i++) {
-                float angle = (2 * PI * i) / num_tendrils;
-
-                float start_r = current_radius - 20;
-                if (start_r < 10) start_r = 10;
-
-                // Curve the tendril
-                int curve_steps = 10;
-                for (int step = 0; step < curve_steps - 1; step++) {
-                    float t1 = (float)step / curve_steps;
-                    float t2 = (float)(step + 1) / curve_steps;
-
-                    // Position along tendril
-                    float r1 = start_r + 50 * t1;
-                    float r2 = start_r + 50 * t2;
-
-                    // Curve towards center
-                    float curve_angle_1 = angle + (PI/2 - angle) * t1 * 0.3f;
-                    float curve_angle_2 = angle + (PI/2 - angle) * t2 * 0.3f;
-
-                    SDL_RenderDrawLine(renderer,
-                        (int)(hole_x + r1 * cosf(curve_angle_1)),
-                        (int)(hole_y + r1 * sinf(curve_angle_1)),
-                        (int)(hole_x + r2 * cosf(curve_angle_2)),
-                        (int)(hole_y + r2 * sinf(curve_angle_2)));
-                }
-            }
-        }
+        // Draw black overlay that fades in from transparent to opaque
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, (Uint8)fade_amount);
+        SDL_RenderFillRect(renderer, NULL);
 
         SDL_RenderPresent(renderer);
         SDL_Delay(16); // ~60fps
