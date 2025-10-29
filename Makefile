@@ -39,7 +39,7 @@ lifeforms: main_lifeforms.c
 	$(CC) $(CFLAGS) -o build/lifeforms main_lifeforms.c $(LDFLAGS)
 
 fadeout: main_fadeout.c
-	$(CC) $(CFLAGS) -o build/fadeout main_fadeout.c $(LDFLAGS) -lX11
+	$(CC) $(CFLAGS) -o build/fadeout main_fadeout.c $(LDFLAGS)
 
 matrix: main_matrix.c
 	$(CC) $(CFLAGS) -o build/matrix main_matrix.c $(LDFLAGS) -lSDL2_ttf
