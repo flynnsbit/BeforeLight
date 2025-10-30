@@ -2,6 +2,7 @@
 #include <SDL2/SDL_image.h>
 #include "assets/fish_angel.h"
 #include "assets/fish_butterfly.h"
+#include "assets/fish_clown.h"
 #include "assets/fish_flounder.h"
 #include "assets/fish_guppy.h"
 #include "assets/fish_jelly.h"
@@ -40,15 +41,15 @@ struct AnimParam {
     int flap_direction; // 1 or -1 or 0 for toast
 };
 
-const struct AnimParam anim_params[11] = {
+struct AnimParam anim_params[11] = {
     {18.2, 0.0, 0}, // ltr slowed
     {18.2, 0.0, 1}, // rtl slowed
     {9.1f, 0.0, 0}, // ltr-fast slowed
     {9.1f, 0.0, 1}, // rtl-fast slowed
-    {18.2, 4.25f, 1}, // rtl-delay1 slowed
-    {18.2, 8.5f, 1}, // rtl-delay-2 slowed
-    {18.2, 4.25f, 1}, // rtl-delay1 or similar slowed
-    {18.2, 6.0f, 1}, // rtl-delay2 slowed
+    {18.2, 0.0, 1}, // rtl-delay1 slowed
+    {18.2, 0.0, 1}, // rtl-delay-2 slowed
+    {18.2, 0.0, 1}, // rtl-delay1 or similar slowed
+    {18.2, 0.0, 1}, // rtl-delay2 slowed
     {18.2, 0.0, 0}, // bubble rise slowed
     {18.2, 4.0, 0}, // bubble rise delay slowed
     {18.2, 8.0, 0}, // bubble rise delay2 slowed
@@ -78,7 +79,7 @@ typedef struct Entity {
 } Entity;
 
 const Entity entities[] = {
-    {0, 0, 0, 1}, // butterfly ltr row1 fish-butterfly.png
+    {0, 0, 5, 1}, // butterfly ltr row6 fish-butterfly.png
     {0, 3, 0, 4}, // jelly rtl-fast row1 fish-jelly.png
     {0, 1, 1, 3}, // guppy rtl row2 fish-guppy.png
     {0, 4, 1, 0}, // angel rtl-delay1 row2 fish-angel.png
@@ -88,6 +89,9 @@ const Entity entities[] = {
     {0, 1, 4, 5}, // minnow rtl row5 fish-minnow.png
     {0, 2, 4, 7}, // seahorse ltr-fast row5 fish-seahorse.png
     {0, 3, 5, 0}, // angel rtl-fast row6 fish-angel.png
+    {0, 0, 3, 2}, // flounder ltr row4 fish-flounder.png
+    {0, 1, 2, 9}, // striped rtl row3 fish-striped.png
+    {0, 3, 1, 10}, // clown rtl-fast row2 fish-clown.png
     {1, 8, 6, 4}, // bubble left
     {1, 9, 7, 4}, // bubble middle
     {1, 10, 8, 4}, // bubble right
@@ -126,6 +130,18 @@ int main(int argc, char *argv[]) {
     setenv("SDL_VIDEODRIVER", "wayland", 1); // Force Wayland for Hyprland
     srand(time(NULL));
 
+    size_t entity_count = sizeof(entities) / sizeof(entities[0]);
+    float entity_speed_mult[entity_count];
+    float entity_delay[entity_count];
+    float random_row_pct[entity_count];
+    for (size_t j = 0; j < entity_count; j++) {
+        entity_speed_mult[j] = 0.8f + (rand() % 10) * 0.1f;
+        entity_delay[j] = (rand() % 1000) * 0.01f;
+        if (entities[j].is_toaster == 0) {
+            random_row_pct[j] = 5.0f + (rand() % 81);
+        }
+    }
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         SDL_Log("SDL_Init Error: %s", SDL_GetError());
         return 1;
@@ -163,11 +179,15 @@ int main(int argc, char *argv[]) {
     int W, H;
     SDL_GetRendererOutputSize(renderer, &W, &H);
 
+    // Calculate margin for off-screen start/end
+    int fish_size = SPRITE_SIZE / 2;
+    float margin_pct = 1.0f + 2.0f * fish_size / (float)W;
+
     // Load textures
-    SDL_Texture *fish_texs[10], *bg_tex, *bubble_tex;
+    SDL_Texture *fish_texs[11], *bg_tex, *bubble_tex;
     SDL_Surface *surf;
     int bg_w = 0, bg_h = 0;
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 11; i++) {
         const unsigned char *data = NULL;
         unsigned int len = 0;
         switch (i) {
@@ -181,6 +201,7 @@ int main(int argc, char *argv[]) {
             case 7: data = fish_seahorse; len = fish_seahorse_len; break;
             case 8: data = fish_sprite; len = fish_sprite_len; break;
             case 9: data = fish_striped; len = fish_striped_len; break;
+            case 10: data = fish_clown; len = fish_clown_len; break;
         }
         SDL_RWops *rw = SDL_RWFromConstMem(data, len);
         if (!rw) {
@@ -297,7 +318,7 @@ int main(int argc, char *argv[]) {
             const struct AnimParam ap = anim_params[ent.anim_type];
             const struct Pos pos = poses[ent.pos_index];
 
-            float local_time = time_s - ap.delay;
+            float local_time = time_s - (ap.delay + entity_delay[i]);
             if (local_time < 0) continue;
 
             float current_x = pos.top_pct * W / 100.0f - 25.0f; // center bubble
@@ -322,23 +343,16 @@ int main(int argc, char *argv[]) {
             if (ent.is_toaster != 0) continue;
             if (drawn_fish >= fish_count) continue;
             const struct AnimParam ap = anim_params[ent.anim_type];
-            const struct Pos pos = poses[ent.pos_index];
 
             // Animation timing
-            float local_time = time_s - ap.delay;
+            float local_time = time_s - (ap.delay + entity_delay[i]);
             if (local_time < 0) continue;
 
-            // Vertical toggle for row1
-            float current_top_pct = pos.top_pct;
-            if (ent.pos_index == 0) {
-                float toggle_cycle = fmodf(local_time, 13.0f);
-                if (toggle_cycle >= 6.5f) {
-                    current_top_pct = pos.top_pct + 50.0f;
-                }
-            }
+            float current_top_pct = random_row_pct[i];
 
-            float cycle_time = fmodf(local_time, ap.fly_duration);
-            float fly_f = cycle_time / ap.fly_duration;
+            float effective_duration = ap.fly_duration * entity_speed_mult[i] * 1.2f;
+            float cycle_time = fmodf(local_time, effective_duration);
+            float fly_f = cycle_time / effective_duration;
 
             // Calculate fish size (fixed 50% smaller)
             int fish_size = SPRITE_SIZE / 2;
@@ -348,8 +362,14 @@ int main(int argc, char *argv[]) {
 
             // Fish swim animation
             int direction = ap.flap_direction;
-            float start_left_pct = (direction == 0) ? -1.0f : 1.4f;
-            float end_left_pct = (direction == 0) ? 1.4f : -1.0f;
+            float start_left_pct, end_left_pct;
+            if (direction == 0) { // ltr
+                start_left_pct = -margin_pct;
+                end_left_pct = 1.0f + margin_pct;
+            } else { // rtl
+                start_left_pct = 1.0f + margin_pct;
+                end_left_pct = -margin_pct;
+            }
             float delta_left_pct = end_left_pct - start_left_pct;
             float current_left_pct = start_left_pct + delta_left_pct * fly_f;
 
@@ -377,7 +397,7 @@ int main(int argc, char *argv[]) {
     system("hyprctl keyword cursor:invisible false 2>/dev/null");
 
     // Cleanup
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 11; i++) {
         SDL_DestroyTexture(fish_texs[i]);
     }
     if (bg_tex) SDL_DestroyTexture(bg_tex);
