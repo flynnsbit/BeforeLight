@@ -35,7 +35,7 @@ typedef struct Worm {
 int main(int argc, char *argv[]) {
     int opt;
     int worm_count = 5;
-    int trail_length = 100;
+    int trail_length = 50; // shortened default for less initial workload
     float speed_mult = 1.0f;
     int do_fullscreen = 1;
     float wiggle = 0.02f;
@@ -244,9 +244,9 @@ int main(int argc, char *argv[]) {
         worms[i].x = W / 2.0f;
         worms[i].y = H / 2.0f;
         float dir = (rand() % 360) * PI / 180.0f;
-        float speed = 120.0f;
-        worms[i].vx = cosf(dir) * speed;
-        worms[i].vy = sinf(dir) * speed;
+    float speed = 240.0f; // doubled base speed for more lively motion
+    worms[i].vx = cosf(dir) * speed;
+    worms[i].vy = sinf(dir) * speed;
         worms[i].color.r = rand() % 256;
         worms[i].color.g = rand() % 256;
         worms[i].color.b = rand() % 256;
@@ -267,9 +267,10 @@ int main(int argc, char *argv[]) {
             SDL_Quit();
             return 1;
         }
+        // Initialize trail with slight staggering to avoid overdraw stall
         for (int j = 0; j < trail_length; j++) {
-            worms[i].segments[j].x = worms[i].x;
-            worms[i].segments[j].y = worms[i].y;
+            worms[i].segments[j].x = (int)(worms[i].x + cosf(dir) * j * 0.5f);
+            worms[i].segments[j].y = (int)(worms[i].y + sinf(dir) * j * 0.5f);
         }
     }
 
@@ -280,6 +281,19 @@ int main(int argc, char *argv[]) {
     SDL_Event e;
     int quit = 0;
     Uint32 start_time = SDL_GetTicks();
+    Uint32 last_ticks = start_time;
+
+    // Pre-render glyph textures (head and body) once for performance
+    SDL_Texture *head_tex = NULL;
+    SDL_Texture *body_tex = NULL;
+    {
+        SDL_Color head_color = {255,255,255,255};
+        SDL_Surface *hsurf = TTF_RenderText_Solid(font, "O", head_color);
+        if (hsurf) { head_tex = SDL_CreateTextureFromSurface(renderer, hsurf); SDL_FreeSurface(hsurf); }
+        SDL_Color body_color = {180,180,180,255};
+        SDL_Surface *bsurf = TTF_RenderText_Solid(font, "-", body_color);
+        if (bsurf) { body_tex = SDL_CreateTextureFromSurface(renderer, bsurf); SDL_FreeSurface(bsurf); }
+    }
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -296,7 +310,10 @@ int main(int argc, char *argv[]) {
         }
 
         // Update worms
-        float dt = 0.016f;
+    Uint32 now = SDL_GetTicks();
+    float dt = (now - last_ticks) / 1000.0f;
+    if (dt > 0.05f) dt = 0.05f; // clamp large frame gaps
+    last_ticks = now;
         for (int i = 0; i < worm_count; i++) {
             Worm *w = &worms[i];
             // Squiggle: small random turn
@@ -436,27 +453,16 @@ int main(int argc, char *argv[]) {
         // Render worms on top
         for (int i = 0; i < worm_count; i++) {
             Worm *w = &worms[i];
+            int tw=0, th=0;
+            if (head_tex) SDL_QueryTexture(head_tex, NULL, NULL, &tw, &th);
             for (int j = 0; j < w->length; j++) {
-                char c = (j == 0) ? 'O' : '-';
-                SDL_Color color;
-                if (j == 0) {
-                    color = (SDL_Color){255, 255, 255, 255}; // white head
-                } else {
-                    color = (SDL_Color){rand() % 256, rand() % 256, rand() % 256, 255};
-                }
-                SDL_Surface *surf = TTF_RenderText_Solid(font, &c, color);
-                if (surf) {
-                    SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
-                    SDL_FreeSurface(surf);
-                    if (tex) {
-                        int tw, th;
-                        SDL_QueryTexture(tex, NULL, NULL, &tw, &th);
-                        SDL_Rect dst = {w->segments[j].x - tw/2, w->segments[j].y - th/2, tw, th};
-                        double angle = (j == 0) ? atan2(w->vy, w->vx) * 180.0 / PI : 0.0;
-                        SDL_RenderCopyEx(renderer, tex, NULL, &dst, angle, NULL, SDL_FLIP_NONE);
-                        SDL_DestroyTexture(tex);
-                    }
-                }
+                SDL_Texture *tex = (j==0)? head_tex : body_tex;
+                if (!tex) continue;
+                int local_tw = tw, local_th = th;
+                if (j!=0 && body_tex) SDL_QueryTexture(body_tex, NULL, NULL, &local_tw, &local_th);
+                SDL_Rect dst = {w->segments[j].x - local_tw/2, w->segments[j].y - local_th/2, local_tw, local_th};
+                double angle = (j == 0) ? atan2(w->vy, w->vx) * 180.0 / PI : 0.0;
+                SDL_RenderCopyEx(renderer, tex, NULL, &dst, angle, NULL, SDL_FLIP_NONE);
             }
         }
 
@@ -483,6 +489,8 @@ int main(int argc, char *argv[]) {
         if (chomp) Mix_FreeChunk(chomp);
         Mix_CloseAudio();
     }
+    if (head_tex) SDL_DestroyTexture(head_tex);
+    if (body_tex) SDL_DestroyTexture(body_tex);
     TTF_CloseFont(font);
     TTF_Quit();
     SDL_DestroyRenderer(renderer);
