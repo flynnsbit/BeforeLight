@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
         NULL
     };
     for (int i = 0; font_paths[i]; i++) {
-        font = TTF_OpenFont(font_paths[i], 8);
+    font = TTF_OpenFont(font_paths[i], 16); // doubled glyph size for thicker worms
         if (font) break;
     }
     if (!font) {
@@ -443,7 +443,7 @@ int main(int argc, char *argv[]) {
             Worm *w = &worms[i];
             for (int j = 0; j < w->length - 1; j++) {
                 // Thickness tapering: head thick, tail thin
-                int thickness = 2 + 6 * (w->length - 1 - j) / (w->length - 1);
+                int thickness = (2 + 6 * (w->length - 1 - j) / (w->length - 1)) * 2; // doubled trail thickness
                 for (int t = -thickness / 2; t <= thickness / 2; t++) {
                     SDL_RenderDrawLine(renderer, w->segments[j].x + t, w->segments[j].y,
                                       w->segments[j+1].x + t, w->segments[j+1].y);

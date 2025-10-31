@@ -99,7 +99,7 @@ const Entity entities[] = {
 
 int main(int argc, char *argv[]) {
     int opt;
-    int fish_count = 30;
+    int fish_count = 33; // increased max default by 3
     int bubble_count = 15;
     float speed_mult = 1.0f;
     int do_fullscreen = 1;
@@ -136,10 +136,19 @@ int main(int argc, char *argv[]) {
     float random_row_pct[entity_count];
     for (size_t j = 0; j < entity_count; j++) {
         entity_speed_mult[j] = 0.8f + (rand() % 10) * 0.1f;
-        entity_delay[j] = (rand() % 1000) * 0.01f;
+        // Reduce initial delay for fish for quicker appearance
+        if (entities[j].is_toaster == 0) {
+            entity_delay[j] = (rand() % 500) * 0.001f; // 0.0s - 0.5s
+        } else {
+            entity_delay[j] = (rand() % 1000) * 0.01f; // keep bubbles slower
+        }
         if (entities[j].is_toaster == 0) {
             random_row_pct[j] = 5.0f + (rand() % 81);
         }
+    }
+    // Force very first fish to appear immediately
+    for (size_t j = 0; j < entity_count; j++) {
+        if (entities[j].is_toaster == 0) { entity_delay[j] = 0.0f; break; }
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
