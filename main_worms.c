@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     float speed_mult = 1.0f;
     int do_fullscreen = 1;
     float wiggle = 0.02f;
-    int audio_enabled = 1;
+    int audio_enabled = 0; // default audio off; enable with -a 1
 
     while ((opt = getopt(argc, argv, "n:l:s:f:w:a:h")) != -1) {
         switch (opt) {
@@ -116,22 +116,23 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Audio init
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
-        SDL_Log("Mix_OpenAudio Error: %s", Mix_GetError());
-        TTF_CloseFont(font);
-        TTF_Quit();
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
-    }
     Mix_Chunk *chomp = NULL;
-    // Assume chomp.h with unsigned char chomp_sound[], int chomp_sound_length
-    #include "assets/chomp.h"
-    SDL_RWops *rw = SDL_RWFromConstMem(chomp_sound, chomp_sound_length);
-    chomp = Mix_LoadWAV_RW(rw, 1);
-    if (!chomp) {
-        SDL_Log("Cannot load chomp sound: %s", Mix_GetError());
+    if (audio_enabled) {
+        if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+            SDL_Log("Mix_OpenAudio Error: %s", Mix_GetError());
+            TTF_CloseFont(font);
+            TTF_Quit();
+            IMG_Quit();
+            SDL_Quit();
+            return 1;
+        }
+        // Assume chomp.h with unsigned char chomp_sound[], int chomp_sound_length
+        #include "assets/chomp.h"
+        SDL_RWops *rw = SDL_RWFromConstMem(chomp_sound, chomp_sound_length);
+        chomp = Mix_LoadWAV_RW(rw, 1);
+        if (!chomp) {
+            SDL_Log("Cannot load chomp sound: %s", Mix_GetError());
+        }
     }
 
     // Screenshot capture (from main_spotlight.c)
@@ -478,8 +479,10 @@ int main(int argc, char *argv[]) {
     SDL_DestroyTexture(trails_tex);
     if (bg_tex) SDL_DestroyTexture(bg_tex);
     if (screenshot_surf) SDL_FreeSurface(screenshot_surf);
-    if (chomp) Mix_FreeChunk(chomp);
-    Mix_CloseAudio();
+    if (audio_enabled) {
+        if (chomp) Mix_FreeChunk(chomp);
+        Mix_CloseAudio();
+    }
     TTF_CloseFont(font);
     TTF_Quit();
     SDL_DestroyRenderer(renderer);

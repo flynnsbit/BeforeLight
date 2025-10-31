@@ -344,7 +344,7 @@ ConfigOption worms_opts[] = {
     {"s", 'f', "Speed multiplier (0.1-10.0)", 0.1f, 10.0f, 1.0f, "", 0},
     {"w", 'f', "Wiggle factor (0.0-1.0)", 0.0f, 1.0f, 0.02f, "", 0},
     {"f", 'b', "Fullscreen (0=windowed,1=fullscreen)", 0, 1, 1, "", 1},
-    {"a", 'b', "Audio enabled (0/1)", 0, 1, 1, "", 1}
+    {"a", 'b', "Audio enabled (0/1)", 0, 1, 0, "", 0}
 };
 
 void configure_screensaver(int index) {
