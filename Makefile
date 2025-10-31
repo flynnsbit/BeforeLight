@@ -35,8 +35,8 @@ rainstorm: main_rainstorm.c
 spotlight: main_spotlight.c
 	$(CC) $(CFLAGS) -o build/spotlight main_spotlight.c $(LDFLAGS)
 
-lifeforms: main_lifeforms.c
-	$(CC) $(CFLAGS) -o build/lifeforms main_lifeforms.c $(LDFLAGS)
+lifeforms: main_lifeforms_new.c
+	$(CC) $(CFLAGS) -o build/lifeforms main_lifeforms_new.c $(LDFLAGS)
 
 fadeout: main_fadeout.c
 	$(CC) $(CFLAGS) -o build/fadeout main_fadeout.c $(LDFLAGS)
@@ -53,10 +53,13 @@ paperfire: main_paperfire.c
 cityscape: main_cityscape.c
 	$(CC) $(CFLAGS) -o build/cityscape main_cityscape.c $(LDFLAGS)
 
+worms: main_worms.c
+	$(CC) $(CFLAGS) -o build/worms main_worms.c $(LDFLAGS) -lSDL2_ttf -lSDL2_mixer
+
 screensaver_config: screensaver_config.c
 	$(CC) -Wall -Wextra -O2 -o build/screensaver_config screensaver_config.c -lncurses -lm
 
-all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix randomizer paperfire cityscape screensaver_config
+all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix randomizer paperfire cityscape worms screensaver_config
 
 clean:
 	rm -f build/*
