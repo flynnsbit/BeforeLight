@@ -10,6 +10,22 @@
 
 #define PI 3.141592653589793f
 
+// Convert HSV (0-360,0-1,0-1) to SDL_Color (RGB)
+static SDL_Color hsv_to_rgb(float h, float s, float v) {
+    float c = v * s;
+    float x = c * (1 - fabsf(fmodf(h / 60.0f, 2) - 1));
+    float m = v - c;
+    float r=0,g=0,b=0;
+    if (h < 60) { r=c; g=x; b=0; }
+    else if (h < 120) { r=x; g=c; b=0; }
+    else if (h < 180) { r=0; g=c; b=x; }
+    else if (h < 240) { r=0; g=x; b=c; }
+    else if (h < 300) { r=x; g=0; b=c; }
+    else { r=c; g=0; b=x; }
+    SDL_Color col = { (Uint8)((r+m)*255), (Uint8)((g+m)*255), (Uint8)((b+m)*255), 255 };
+    return col;
+}
+
 extern char *optarg;
 
 static void usage(const char *prog) {
@@ -283,17 +299,13 @@ int main(int argc, char *argv[]) {
     Uint32 start_time = SDL_GetTicks();
     Uint32 last_ticks = start_time;
 
-    // Pre-render glyph textures (head and body) once for performance
+    // Pre-render base glyph surfaces (we'll modulate color later for body)
     SDL_Texture *head_tex = NULL;
-    SDL_Texture *body_tex = NULL;
-    {
-        SDL_Color head_color = {255,255,255,255};
-        SDL_Surface *hsurf = TTF_RenderText_Solid(font, "O", head_color);
-        if (hsurf) { head_tex = SDL_CreateTextureFromSurface(renderer, hsurf); SDL_FreeSurface(hsurf); }
-        SDL_Color body_color = {180,180,180,255};
-        SDL_Surface *bsurf = TTF_RenderText_Solid(font, "-", body_color);
-        if (bsurf) { body_tex = SDL_CreateTextureFromSurface(renderer, bsurf); SDL_FreeSurface(bsurf); }
-    }
+    SDL_Surface *head_surf = TTF_RenderText_Solid(font, "O", (SDL_Color){255,255,255,255});
+    if (head_surf) { head_tex = SDL_CreateTextureFromSurface(renderer, head_surf); SDL_FreeSurface(head_surf); }
+    SDL_Surface *body_surf = TTF_RenderText_Solid(font, "-", (SDL_Color){255,255,255,255});
+    SDL_Texture *body_tex_base = NULL;
+    if (body_surf) { body_tex_base = SDL_CreateTextureFromSurface(renderer, body_surf); SDL_FreeSurface(body_surf); }
 
     while (!quit) {
         while (SDL_PollEvent(&e)) {
@@ -451,18 +463,30 @@ int main(int argc, char *argv[]) {
             // No screenshot, just black
         }
         // Render worms on top
+        float rainbow_time = (now - start_time) / 1000.0f;
         for (int i = 0; i < worm_count; i++) {
             Worm *w = &worms[i];
-            int tw=0, th=0;
-            if (head_tex) SDL_QueryTexture(head_tex, NULL, NULL, &tw, &th);
+            int head_w=0, head_h=0;
+            if (head_tex) SDL_QueryTexture(head_tex, NULL, NULL, &head_w, &head_h);
             for (int j = 0; j < w->length; j++) {
-                SDL_Texture *tex = (j==0)? head_tex : body_tex;
-                if (!tex) continue;
-                int local_tw = tw, local_th = th;
-                if (j!=0 && body_tex) SDL_QueryTexture(body_tex, NULL, NULL, &local_tw, &local_th);
-                SDL_Rect dst = {w->segments[j].x - local_tw/2, w->segments[j].y - local_th/2, local_tw, local_th};
+                SDL_Texture *tex;
+                SDL_Rect dst;
                 double angle = (j == 0) ? atan2(w->vy, w->vx) * 180.0 / PI : 0.0;
-                SDL_RenderCopyEx(renderer, tex, NULL, &dst, angle, NULL, SDL_FLIP_NONE);
+                if (j == 0) {
+                    if (!head_tex) continue;
+                    dst = (SDL_Rect){w->segments[j].x - head_w/2, w->segments[j].y - head_h/2, head_w, head_h};
+                    SDL_RenderCopyEx(renderer, head_tex, NULL, &dst, angle, NULL, SDL_FLIP_NONE);
+                } else {
+                    if (!body_tex_base) continue;
+                    int bw=0,bh=0; SDL_QueryTexture(body_tex_base, NULL, NULL, &bw, &bh);
+                    dst = (SDL_Rect){w->segments[j].x - bw/2, w->segments[j].y - bh/2, bw, bh};
+                    // Compute hue shifting along worm length and time
+                    float hue = fmodf((rainbow_time * 60.0f) + (j * 6.0f) + i * 15.0f, 360.0f);
+                    SDL_Color col = hsv_to_rgb(hue, 1.0f, 1.0f);
+                    // Apply modulation
+                    SDL_SetTextureColorMod(body_tex_base, col.r, col.g, col.b);
+                    SDL_RenderCopyEx(renderer, body_tex_base, NULL, &dst, angle, NULL, SDL_FLIP_NONE);
+                }
             }
         }
 
@@ -490,7 +514,7 @@ int main(int argc, char *argv[]) {
         Mix_CloseAudio();
     }
     if (head_tex) SDL_DestroyTexture(head_tex);
-    if (body_tex) SDL_DestroyTexture(body_tex);
+    if (body_tex_base) SDL_DestroyTexture(body_tex_base);
     TTF_CloseFont(font);
     TTF_Quit();
     SDL_DestroyRenderer(renderer);
