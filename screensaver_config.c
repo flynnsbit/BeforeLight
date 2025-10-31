@@ -48,18 +48,8 @@ typedef struct {
     char options[256]; // Configured options string
 } Screensaver;
 
-// Global screensaver list
+// Global screensaver list - updated to match existing screensavers
 Screensaver savers[] = {
-    {"starrynight",
-     "⭐",
-     "Star Field",
-     "Dynamic celestial dome with realistic twinkle effects.\n\nFeatures meteor showers and astronomical accuracy.\nSupports configurable speed, density, and rotation modes.",
-     ""},
-    {"starsclean",
-     "⭐",
-     "Static Stars",
-     "Clean, static starfield with authentic twinkling.\n\nFixed-position stars that simulate atmospheric\ndistortion effects like real celestial observation.",
-     ""},
     {"fadeout",
      "🌫️",
      "Clouds",
@@ -140,8 +130,13 @@ Screensaver savers[] = {
      "Bouncing Ball",
      "Physics-based bouncing ball animation.\n\nRealistic gravity simulation with momentum\nand collision effects across display area.",
      ""},
+    {"worms",
+     "🪱",
+     "Worm Colony",
+     "Animated worm-like entities crawling and colliding.\n\nMulti-worm physics with trails, head-tail interactions,\nrandom wiggle motion and optional chomp sound.",
+     ""},
     {"warp",
-     "💫🌊",
+     "💫",
      "Warp Effects",
      "Fluid distortion and liquid warping effects.\n\nPsychedelic surface distortions with organic\nmovement patterns and wave-like animations.",
      ""}
@@ -191,13 +186,6 @@ char *get_screensaver_path(const char *name) {
 // Check if file exists
 int file_exists(const char *path) {
     return access(path, F_OK) == 0;
-}
-
-// Extract help options from starrynight
-void parse_starrynight_options(void) {
-    // Would need to run './build/starrynight -h' and parse output in real app
-    // For now, hardcode based on known options
-    strcpy(savers[0].options, "-s 1.0 -d 0.5 -m 1.0 -r dynamic");
 }
 
 void write_screensaver_script(const char *path, const char *options) {
@@ -335,13 +323,6 @@ typedef struct {
 } ConfigOption;
 
 // Configuration definitions for each screensaver
-ConfigOption starrynight_opts[] = {
-    {"speed", 'f', "Animation speed multiplier", 0.1, 5.0, 1.0, "", 0},
-    {"density", 'f', "Star density (0.0-1.0)", 0.0, 1.0, 0.5, "", 0},
-    {"meteors", 'f', "Meteor frequency multiplier", 0.0, 5.0, 1.0, "", 0},
-    {"rotation", 'i', "Celestial rotation mode (0=dynamic,1=static,2=none)", 0, 2, 0, "", 0}
-};
-
 ConfigOption messages_opts[] = {
     {"text", 's', "Scroll text to display", 0, 0, 0, "", 0}  // String input
 };
@@ -350,17 +331,29 @@ ConfigOption messages2_opts[] = {
     {"text", 's', "Scroll text to display", 0, 0, 0, "", 0}  // String input
 };
 
+// Worms configuration options
+// n: number of worms (int 1-50)
+// l: trail length (int 5-100)
+// s: speed multiplier (float 0.1-10.0)
+// w: wiggle factor (float 0.0-1.0)
+// f: fullscreen (bool 0/1)
+// a: audio enabled (bool 0/1)
+ConfigOption worms_opts[] = {
+    {"n", 'f', "Number of worms (1-50)", 1, 50, 5, "", 0},
+    {"l", 'f', "Trail length (5-100)", 5, 100, 100, "", 0},
+    {"s", 'f', "Speed multiplier (0.1-10.0)", 0.1f, 10.0f, 1.0f, "", 0},
+    {"w", 'f', "Wiggle factor (0.0-1.0)", 0.0f, 1.0f, 0.02f, "", 0},
+    {"f", 'b', "Fullscreen (0=windowed,1=fullscreen)", 0, 1, 1, "", 1},
+    {"a", 'b', "Audio enabled (0/1)", 0, 1, 1, "", 1}
+};
+
 void configure_screensaver(int index) {
     // Define options available for each screensaver
     ConfigOption *opts = NULL;
     int num_opts = 0;
     char title[64];
 
-    if (strcmp(savers[index].name, "starrynight") == 0) {
-        opts = starrynight_opts;
-        num_opts = sizeof(starrynight_opts) / sizeof(ConfigOption);
-        sprintf(title, "Configure ⭐ %s", savers[index].name);
-    } else if (strcmp(savers[index].name, "messages") == 0) {
+    if (strcmp(savers[index].name, "messages") == 0) {
         opts = messages_opts;
         num_opts = sizeof(messages_opts) / sizeof(ConfigOption);
         sprintf(title, "Configure 💬 %s", savers[index].name);
@@ -368,6 +361,10 @@ void configure_screensaver(int index) {
         opts = messages2_opts;
         num_opts = sizeof(messages2_opts) / sizeof(ConfigOption);
         sprintf(title, "Configure 💬 %s", savers[index].name);
+    } else if (strcmp(savers[index].name, "worms") == 0) {
+        opts = worms_opts;
+        num_opts = sizeof(worms_opts) / sizeof(ConfigOption);
+        sprintf(title, "Configure 🪱 %s", savers[index].name);
     } else {
         // Non-configurable screensaver
         WINDOW *msg_win = newwin(8, 40, (LINES-8)/2, (COLS-40)/2);
@@ -429,6 +426,8 @@ void configure_screensaver(int index) {
             if (opts[i].type == 'f') {
                 mvwprintw(config_win, y_pos, 20, "%.1f (range: %.1f-%.1f)",
                          opts[i].default_val, opts[i].min_val, opts[i].max_val);
+            } else if (opts[i].type == 'b') {
+                mvwprintw(config_win, y_pos, 20, "%s", opts[i].default_val >= 0.5f ? "on" : "off");
             } else if (opts[i].type == 'c') {
                 char *mode_names[] = {"dynamic", "static", "none"};
                 mvwprintw(config_win, y_pos, 20, "%s", mode_names[(int)opts[i].default_val]);
@@ -461,6 +460,8 @@ void configure_screensaver(int index) {
                     opts[current_opt].default_val += step;
                     if (opts[current_opt].default_val > opts[current_opt].max_val)
                         opts[current_opt].default_val = opts[current_opt].max_val;
+                } else if (opts[current_opt].type == 'b') {
+                    opts[current_opt].default_val = (opts[current_opt].default_val < 0.5f) ? 1.0f : 0.0f;
                 } else if (opts[current_opt].type == 'c') {
                     opts[current_opt].default_val = ((int)opts[current_opt].default_val + 1) % 3;
                 }
@@ -470,6 +471,8 @@ void configure_screensaver(int index) {
                     opts[current_opt].default_val -= step;
                     if (opts[current_opt].default_val < opts[current_opt].min_val)
                         opts[current_opt].default_val = opts[current_opt].min_val;
+                } else if (opts[current_opt].type == 'b') {
+                    opts[current_opt].default_val = (opts[current_opt].default_val < 0.5f) ? 1.0f : 0.0f;
                 } else if (opts[current_opt].type == 'c') {
                     opts[current_opt].default_val = ((int)opts[current_opt].default_val + 2) % 3;
                 }
@@ -496,6 +499,9 @@ void configure_screensaver(int index) {
                     char opt_str[64];
                     if (opts[i].type == 'f') {
                         sprintf(opt_str, " -%c %.1f", opts[i].name[0], opts[i].default_val);
+                        strcat(cmd_opts, opt_str);
+                    } else if (opts[i].type == 'b') {
+                        sprintf(opt_str, " -%c %d", opts[i].name[0], (int)(opts[i].default_val + 0.5f));
                         strcat(cmd_opts, opt_str);
                     } else if (opts[i].type == 'c') {
                         char *mode_names[] = {"dynamic", "static", "none"};
@@ -629,7 +635,8 @@ void draw_menu(WINDOW *list_win, WINDOW *desc_win, int highlight) {
         }
 
         // Show if configurable
-        const char *configurable_text = (strcmp(savers[highlight].name, "starrynight") == 0) ?
+        const char *configurable_text = (strcmp(savers[highlight].name, "messages") == 0 || 
+                                        strcmp(savers[highlight].name, "messages2") == 0) ?
                                        "(Configurable with C key)" : "(Non-configurable)";
         mvwprintw(desc_win, LINES - 3, 2, "%s", configurable_text);
     }
@@ -691,9 +698,6 @@ int main() {
         printf("Error: Build directory not found: %s\n", build_dir_expanded);
         return 1;
     }
-
-    // Parse options for configurable screensavers
-    parse_starrynight_options();
 
     // Split screen: 60% list, 40% description
     int list_width = max_x * 6 / 10;  // 60% for list
