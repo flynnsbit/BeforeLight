@@ -36,15 +36,31 @@ SCREEN_DIR="$HOME/.config/omarchy/branding/screensaver"
 echo "📁 Creating Omarchy screensaver directory: $SCREEN_DIR"
 mkdir -p "$SCREEN_DIR"
 
+echo "� Building all screensavers..."
+
+# Navigate to project root (one level up from install directory)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
+
+# Build all screensavers
+make all
+
 echo "📋 Copying screensavers to Omarchy directory..."
 
-# Copy all screensavers from the install directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-for binary in "$SCRIPT_DIR"/*; do
-    if [[ -f "$binary" && -x "$binary" && "$binary" != "$SCRIPT_DIR/install.sh" ]]; then
-        cp "$binary" "$SCREEN_DIR/"
-    fi
-done
+# Copy all built screensavers from build directory
+BUILD_DIR="$PROJECT_ROOT/build"
+if [[ -d "$BUILD_DIR" ]]; then
+    for binary in "$BUILD_DIR"/*; do
+        if [[ -f "$binary" && -x "$binary" ]]; then
+            echo "   Copying $(basename "$binary")..."
+            cp "$binary" "$SCREEN_DIR/"
+        fi
+    done
+else
+    echo "❌ Error: Build directory not found at $BUILD_DIR"
+    exit 1
+fi
 
 echo "✅ Installation completed successfully!"
 echo ""

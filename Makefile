@@ -50,9 +50,6 @@ randomizer: main_randomizer.c
 paperfire: main_paperfire.c
 	$(CC) $(CFLAGS) -o build/paperfire main_paperfire.c $(LDFLAGS)
 
-cityscape: main_cityscape.c
-	$(CC) $(CFLAGS) -o build/cityscape main_cityscape.c $(LDFLAGS)
-
 worms: main_worms.c
 	$(CC) $(CFLAGS) -o build/worms main_worms.c $(LDFLAGS) -lSDL2_ttf -lSDL2_mixer
 
@@ -62,7 +59,7 @@ starrynight: starrynight.c
 screensaver_config: screensaver_config.c
 	$(CC) -Wall -Wextra -O2 -o build/screensaver_config screensaver_config.c -lncurses -lm
 
-all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix randomizer paperfire cityscape worms starrynight screensaver_config
+all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix randomizer paperfire worms starrynight screensaver_config
 
 clean:
 	rm -f build/*
