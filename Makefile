@@ -56,10 +56,13 @@ cityscape: main_cityscape.c
 worms: main_worms.c
 	$(CC) $(CFLAGS) -o build/worms main_worms.c $(LDFLAGS) -lSDL2_ttf -lSDL2_mixer
 
+starrynight: starrynight.c
+	$(CC) $(CFLAGS) -o build/starrynight starrynight.c $(LDFLAGS) -lSDL2_ttf -lGL -lGLU
+
 screensaver_config: screensaver_config.c
 	$(CC) -Wall -Wextra -O2 -o build/screensaver_config screensaver_config.c -lncurses -lm
 
-all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix randomizer paperfire cityscape worms screensaver_config
+all: fishsaver hardrain bouncingball globe warp toastersaver messages messages2 logo rainstorm spotlight lifeforms fadeout matrix randomizer paperfire cityscape worms starrynight screensaver_config
 
 clean:
 	rm -f build/*
