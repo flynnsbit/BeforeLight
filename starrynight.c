@@ -24,10 +24,10 @@
 #include <stdbool.h>
 
 #define PI 3.14159265359f
-#define STAR_COUNT 10500  // Massive flat star field expansion (10,000 stars added)
+#define STAR_COUNT 500  // Space for drifting sky stars only
 #define GAP_STAR_COUNT 10000  // Stars specifically in gaps between buildings
-#define METEOR_COUNT 30
-#define METEOR_PARTICLES 30
+#define METEOR_COUNT 100
+#define METEOR_PARTICLES 20
 #define CITY_BUILDINGS 13     // Number of solid buildings with windows
 
 // ADVANCED URBAN SYSTEM DEFINES - Dynamic Building System for Dense Cityscape
@@ -678,6 +678,11 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
         glBegin(GL_QUADS);
         for (int floor = 0; floor < floors; floor++) {
             for (int window_x = 0; window_x < windows_per_floor; window_x++) {
+                // CHECK WINDOW ILLUMINATION STATUS
+                if (structure->window_grid[floor][window_x] == 0) {
+                    continue; // Window is dark
+                }
+
                 // WINDOW POSITION CALCULATION
                 float window_left = building_x + WINDOW_GRID_SAFE_MARGIN + window_x * window_width;
                 float window_bottom = building_y + WINDOW_GRID_SAFE_MARGIN + floor * floor_height + window_spacing_y;
@@ -685,20 +690,6 @@ void render_illuminated_window_grids(int screen_width __attribute__((unused)), i
                 float window_top = window_bottom + window_height;
                 float window_center_x = (window_left + window_right) / 2.0f;
                 float window_center_y = (window_bottom + window_top) / 2.0f;
-
-                // DRAW FAINT UNLIT WINDOW SILHOUETTE FOR REALISTIC APPEARANCE
-                glColor4f(0.25f, 0.25f, 0.3f, 0.3f); // Very faint dark blue-gray
-                glVertex2f(window_left, window_bottom);
-                glVertex2f(window_right, window_bottom);
-                glVertex2f(window_right, window_top);
-                glVertex2f(window_left, window_top);
-
-                // SKIP ILLUMINATED WINDOW RENDERING IF WINDOW IS DARK
-                if (structure->window_grid[floor][window_x] == 0) {
-                    continue; // Window is dark - only faint silhouette rendered
-                }
-
-                // CONTINUE WITH ILLUMINATED WINDOW RENDERING
 
                 // RENDER DARK WINDOW BORDER FRAME FIRST
                 glColor4f(0.1f, 0.1f, 0.1f, 0.9f); // Dark gray frame
@@ -763,10 +754,7 @@ int main(int argc, char *argv[]) {
     float meteor_freq = 1.0f;
     int ch;
 
-    // STAR ROTATION MODE SELECTION - Default: Static flat plane (no dome effects)
-    int celestial_sphere_mode = 0; // 0 = static flat plane, 1 = celestial sphere
-
-    while ((ch = getopt(argc, argv, "s:d:m:r:h")) != -1) {
+    while ((ch = getopt(argc, argv, "s:d:m:h")) != -1) {
         switch (ch) {
             case 's':
                 speed_mult = atof(optarg);
@@ -780,18 +768,6 @@ int main(int argc, char *argv[]) {
                 meteor_freq = atof(optarg);
                 if (meteor_freq < 0) meteor_freq = 0;
                 if (meteor_freq > 5) meteor_freq = 5;
-                break;
-            case 'r':
-                if (strcmp(optarg, "static") == 0) {
-                    celestial_sphere_mode = 0; // Legacy static star field
-                } else if (strcmp(optarg, "dynamic") == 0) {
-                    celestial_sphere_mode = 1; // Celestial sphere rotation (default)
-                } else if (strcmp(optarg, "none") == 0) {
-                    celestial_sphere_mode = 2; // No rotation at all - completely still stars
-                } else {
-                    fprintf(stderr, "Error: -r option must be 'static', 'dynamic', or 'none'\n");
-                    return 1;
-                }
                 break;
             case 'h':
             default:
@@ -827,9 +803,73 @@ int main(int argc, char *argv[]) {
 // LEGACY STATIC BUILDING PRECALCULATION REMOVED
 // All buildings now dynamically generated in urban_complex with proper urban planning
 
-// CALCULATE CONTINUOUS STAR FIELD WITH SMOOTH DENSITY GRADIENT
-// Reach target sky star density at the top, dense at bottom near buildings
-// gap_stars = malloc(GAP_STAR_COUNT * sizeof(Star));  // DISABLED: gap stars disabled
+    // CALCULATE CONTINUOUS STAR FIELD ACROSS ENTIRE SCREEN WIDTH
+    // Stars will be positioned across full horizontal range with vertical density control
+    gap_stars = malloc(GAP_STAR_COUNT * sizeof(Star));
+
+    // Stars are now distributed across full screen width (no gaps - everything is "open area")
+    // Vertical distribution controls where stars appear relative to buildings
+
+    // CREATE CONTINUOUS STAR FIELD WITH GRADUAL HEIGHT-BASED DENSITY ACROSS ENTIRE WIDTH
+    int star_idx = 0;
+
+    // Find the maximum building height to determine blend zones
+    // Use the dynamic urban_complex instead of static buildings array
+    float max_building_height = 0.0f;
+    for (int i = 0; i < MAX_URBAN_BUILDINGS; i++) {
+        if (urban_complex[i].height > max_building_height) {
+            max_building_height = urban_complex[i].height;
+        }
+    }
+
+    // Define density zones for continuous coverage
+    // Zone 1: Building area (dense - near ground level)
+    // Zone 2: Above building tops (gradually decreasing)
+    // Zone 3: Upper atmosphere (matching sky density)
+
+    float building_top_level = urban_complex[0].y + max_building_height; // Top of tallest building
+    float zone2_end = building_top_level + (max_building_height * 0.5f); // 50% above buildings
+    float zone3_start = screen_height / 4; // Where sky stars begin
+
+    // Create stars across entire screen width with height-based density
+    for (int j = 0; j < GAP_STAR_COUNT; j++) {
+        Star *star = &gap_stars[star_idx];
+
+        // Position across full screen width (not just gaps)
+        star->x = (float)rand() / RAND_MAX * screen_width;
+
+        // Position with gradual density decrease from building level to full height
+        // Map star to different vertical zones with varying density
+        float rand_val = (float)rand() / RAND_MAX;
+
+        if (rand_val < 0.6f) {
+            // 60% of stars in dense building level zone (near ground, between buildings)
+            star->y = urban_complex[0].y + rand_val / 0.6f * max_building_height;
+        } else if (rand_val < 0.9f) {
+            // 30% of stars in medium density zone (above building tops)
+            float zone_progress = (rand_val - 0.6f) / 0.3f; // 0-1 in this zone
+            star->y = building_top_level + zone_progress * (zone2_end - building_top_level);
+        } else {
+            // 10% of stars in light upper zone (towards where sky stars begin)
+            float zone_progress = (rand_val - 0.9f) / 0.1f; // 0-1 in this zone
+            star->y = zone3_start + zone_progress * (screen_height - zone3_start);
+        }
+
+        // Define motion
+        star->vx = (float)(rand() % 20 - 10) / 500.0f; // Very slow drift
+        star->vy = (float)(rand() % 20 - 10) / 500.0f;
+
+        // Standard star properties - slightly dimmer than sky stars for layering
+        star->base_brightness = 0.3f + (float)(rand() % 50) / 100.0f; // 0.3-0.8 range
+        star->brightness = star->base_brightness;
+        star->twinkle_phase = (float)(rand() % 628) / 100.0f;
+        star->twinkle_speed = 0.6f + (float)(rand() % 80) / 100.0f; // Varied twinkling
+        star->size = 0.8f + (float)(rand() % 15) / 10.0f; // Smaller 0.8-2.3 pixels
+        star->is_bright = (rand() % 100) < 15; // 15% bright gap stars (fewer than sky)
+        star->building_gap = -1; // No longer tracking specific gaps
+
+        star_idx++;
+    }
 
     // Create fullscreen window using SDL_WINDOW_FULLSCREEN_DESKTOP for proper Hyprland integration
     SDL_Window *window = SDL_CreateWindow("Starry Night",
@@ -856,8 +896,8 @@ int main(int argc, char *argv[]) {
     // Initialize OpenGL
     init_opengl(screen_width, screen_height);
 
-    // IMMEDIATE BUFFER SWAPPING - DISABLE VSYNC FOR UNINTERRUPTED RENDERING
-    SDL_GL_SetSwapInterval(0);  // Disable VSYNC
+    // FORCE IMMEDIATE BUFFER SWAPPING - DISABLE ALL FADING EFFECTS
+    SDL_GL_SetSwapInterval(0);  // Disable VSYNC and any fade transitions
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); // Ensure double buffering
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8); // Stencil buffer for masking
 
@@ -908,21 +948,14 @@ int main(int argc, char *argv[]) {
 
         // Update sky stars and gap stars
         update_stars(stars, actual_star_count, dt * speed_mult, screen_width, screen_height);
-        // update_stars(gap_stars, GAP_STAR_COUNT, dt * speed_mult, screen_width, screen_height);  // DISABLED: gap stars disabled
+        update_stars(gap_stars, GAP_STAR_COUNT, dt * speed_mult, screen_width, screen_height);
 
-        // Update and handle meteors - random intervals between 5-20 seconds for dramatic effect
+        // Update and handle meteors - much more frequent for visibility
         meteor_timer += dt * speed_mult;
+        float meteor_interval = 1.0f / meteor_freq; // Base interval of 1 second, adjusted by frequency
 
-        // Check if it's time to spawn a meteor (random 5-20 second intervals)
-        static float next_meteor_in_seconds = 0.0f;
-
-        if (next_meteor_in_seconds == 0.0f) {
-            // Initialize first meteor delay on startup
-            next_meteor_in_seconds = 5.0f + ((float)rand() / RAND_MAX) * 15.0f; // 5-20 seconds
-        }
-
-        if (meteor_timer >= next_meteor_in_seconds) {
-            meteor_timer = 0.0f; // Reset timer
+        if (meteor_timer >= meteor_interval) {
+            meteor_timer -= meteor_interval;
 
             // Find inactive meteor to activate
             for (int i = 0; i < METEOR_COUNT; i++) {
@@ -931,9 +964,6 @@ int main(int argc, char *argv[]) {
                     break;
                 }
             }
-
-            // Set next meteor to spawn 5-20 seconds from now
-            next_meteor_in_seconds = 5.0f + ((float)rand() / RAND_MAX) * 15.0f; // 5-20 seconds
         }
 
         // Update active meteors
@@ -943,13 +973,13 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // WINDOW RANDOM ILLUMINATION UPDATE - Reduced frequency to prevent disruptive 10-second cycling pattern
+        // WINDOW RANDOM ILLUMINATION UPDATE - Every 0.75 seconds toggle some windows randomly for dynamic lighting effect
         window_update_timer += dt;
-        if (window_update_timer >= 30.0f) { // 30 second interval - much slower, less disruptive
+        if (window_update_timer >= 0.75f) { // 0.75 second interval - faster, more visible activity
             window_update_timer = 0.0f; // Reset timer
 
             // Randomly select and toggle several windows across buildings (slightly more than before)
-            for (int toggle_count = 0; toggle_count < 6; toggle_count++) { // Toggle only 6 windows each time instead of 25
+            for (int toggle_count = 0; toggle_count < 25; toggle_count++) { // Toggle 25 windows each time
                 int random_building = rand() % MAX_URBAN_BUILDINGS;
                 UrbanBuilding* structure = &urban_complex[random_building];
 
@@ -995,10 +1025,6 @@ int main(int argc, char *argv[]) {
         glStencilFunc(GL_ALWAYS, 1, 0xFF);  // Write 1 to stencil where buildings are
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-        // DISABLED: Building mask stencil drawing - creates black rectangles where buildings would be
-        // This was creating dark areas in between stars that could affect perceived fading
-        // REFERENCE: This is the stencil mask that creates building shadows/shapes for stars to render around
-        /*
         // Draw building masks to stencil buffer (invisible on screen)
         // Using dynamic urban_complex data instead of removed static array
         for (int build_idx = 0; build_idx < MAX_URBAN_BUILDINGS; build_idx++) {
@@ -1017,162 +1043,86 @@ int main(int argc, char *argv[]) {
             glVertex2f(build_x_start, build_y_start + build_height);
             glEnd();
         }
-        */
 
-        // DISABLED: Building stencil masking - stars now render everywhere since no buildings
-        // Instead, ensure stars render without stencil restrictions
+        // ENABLE STENCIL MASKING - only render where stencil is 0 (not buildings)
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);  // Re-enable color writing
-        glDisable(GL_STENCIL_TEST);  // Disable stencil for star rendering
+        glStencilFunc(GL_EQUAL, 0, 0xFF);  // Only render where stencil is 0
+        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
 
 
-        // STAR SYSTEM RENDERING - Conditional based on user selection
-        if (celestial_sphere_mode) {
-            // 🌌 STATIC/CELESTIAL SPHERE MODE - Fixed astronomical positions (no spinning)
-            // Render astronomical star sphere with Earth rotation (sidereal ~23h56m)
-            static float celestial_rotation_angle = 0.0f; // Tracks Earth's rotation
-            static float star_declinations[STAR_COUNT]; // Pre-calculated declinations to prevent random regeneration
-            static int declinations_initialized = 0;
+        // Render sky stars (buildings static, stars work normally)
+        glPointSize(1.0f); // Ensure proper star point size
+        render_stars(stars, actual_star_count, screen_width, screen_height);
 
-            // Initialize star declinations once with random values, then keep them static forever
-            if (!declinations_initialized) {
-                srand((unsigned int)time(NULL)); // Initialize random seed for star generation
-                for (int star_idx = 0; star_idx < STAR_COUNT; star_idx++) {
-                    star_declinations[star_idx] = ((rand() % 200) - 100) * PI / 180.0f; // Dec: -90° to +90°
-                }
-                declinations_initialized = 1;
-            }
-
-            // Apply very slow rotation (almost imperceptible - Earth sidereal period)
-            celestial_rotation_angle += dt * 0.000000000045f; // Very slow rotation (1000x slower)
-
-            glPointSize(1.0f); // Ensure proper star point size
-            glBegin(GL_POINTS);
-            glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // Pure white celestial stars
-
-            // Render stars positioned on celestial sphere with FIXED positions and rotation
-            for (int i = 0; i < actual_star_count; i++) {
-                // Generate spherical coordinates for each star (simplified celestial)
-                float ra = ((float)i / actual_star_count) * 2 * PI; // RA: 0-2π (even spacing)
-                float dec = star_declinations[i]; // Use FIXED pre-calculated declination (no rand()!)
-
-                // Apply Earth's rotation (sidereal day: 23h56m49s, ~4 minutes shorter than solar)
-                float adjusted_ra = ra + celestial_rotation_angle;
-
-                // Convert celestial coordinates to 3D unit sphere position
-                float x = cosf(dec) * cosf(adjusted_ra);  // Unit sphere X
-                float y = cosf(dec) * sinf(adjusted_ra);  // Unit sphere Y
-                float z = sinf(dec);                      // Unit sphere Z (altitude)
-
-                // Stereographic projection to 2D screen (looking from "below" the north pole)
-                if (z > -0.1f) { // Only show stars visible from northern hemisphere view
-                    float u, v;
-
-                    if (fabsf(z - 1.0f) < 0.001f) {
-                        // Handle north pole singularity
-                        u = 0.0f;
-                        v = 0.0f;
-                    } else {
-                        // Standard stereographic projection
-                        float scale = 2.0f / (1.0f - z);
-                        u = scale * y * 0.5f; // Scale and center horizontally
-                        v = scale * x * 0.5f; // Scale and center vertically
-                    }
-
-                    // Convert to screen coordinates (centered on screen)
-                    float screen_u = screen_width / 2.0f + u * (screen_width / 4.0f);  // Centered projection
-                    float screen_v = screen_height / 2.0f + v * (screen_height / 4.0f);
-
-                    // Only render if star is visible (above horizon/buildings)
-                    if (screen_u >= 0 && screen_u < screen_width &&
-                        screen_v >= 0 && screen_v < screen_height) {
-
-                        // DISABLED: Building horizon mask - stars render everywhere now since buildings are not visually present
-                        // This was creating black voids where buildings would be
-                        // if (!under_building) {
-                            glVertex2f(screen_u, screen_v);
-                        // }
-                    }
-                }
-            }
-            glEnd();
-
-        } else {
-            // 📺 STATIC/LEGACY MODE - Original star field behavior
-            glPointSize(1.0f); // Ensure proper star point size
-
-            // Reset global color state to prevent fading from other rendering layers
-            glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-
-            render_stars(stars, actual_star_count, screen_width, screen_height);
-        }
-
-        // RENDER GAP STARS BETWEEN BUILDINGS - Continuous density gradient (no stencil needed)
-        // NOTE: ENABLED for subtle slow rotation effect
-        // render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);  // DISABLED: gap stars disabled
+        // RENDER GAP STARS BETWEEN BUILDINGS - NO STENCIL NEEDED, they are in open areas
+        render_stars(gap_stars, GAP_STAR_COUNT, screen_width, screen_height);
 
         // No stencil operations needed for gap stars - they render in open spaces
 
-        // DISABLED: Architectural 3D outlines
-        // // ADD ARCHITECTURAL 3D OUTLINES - Subtle depth suggestion for mass and form
-        // glLineWidth(2.5f); // Slightly thicker for architectural presence
+        // ADD ARCHITECTURAL 3D OUTLINES - Subtle depth suggestion for mass and form
+        glLineWidth(2.5f); // Slightly thicker for architectural presence
 
-        // for (int build_idx = 0; build_idx < MAX_URBAN_BUILDINGS; build_idx++) {
-        //     UrbanBuilding *structure = &urban_complex[build_idx];
-        //     if (structure->floor_quantity <= 0) continue;
+        for (int build_idx = 0; build_idx < MAX_URBAN_BUILDINGS; build_idx++) {
+            UrbanBuilding *structure = &urban_complex[build_idx];
+            if (structure->floor_quantity <= 0) continue;
 
-        //     float build_left = structure->x;
-        //     float build_bottom = structure->y;
-        //     float build_right = structure->x + structure->width;
-        //     float build_top = structure->y + structure->height;
+            float build_left = structure->x;
+            float build_bottom = structure->y;
+            float build_right = structure->x + structure->width;
+            float build_top = structure->y + structure->height;
 
-        //     // SHADOW EDGES - Dark outlines suggesting overhead top-right lighting
-        //     glColor4f(0.1f, 0.1f, 0.1f, 0.7f); // Dark shadow color
-        //     glBegin(GL_LINES);
-        //     // Bottom shadow edge
-        //     glVertex2f(build_left + 1.0f, build_bottom);
-        //     glVertex2f(build_right - 1.0f, build_bottom);
-        //     // Left shadow edge
-        //     glVertex2f(build_left, build_bottom + 1.0f);
-        //     glVertex2f(build_left, build_top - 1.0f);
-        //     glEnd();
+            // SHADOW EDGES - Dark outlines suggesting overhead top-right lighting
+            glColor4f(0.1f, 0.1f, 0.1f, 0.7f); // Dark shadow color
+            glBegin(GL_LINES);
+            // Bottom shadow edge
+            glVertex2f(build_left + 1.0f, build_bottom);
+            glVertex2f(build_right - 1.0f, build_bottom);
+            // Left shadow edge
+            glVertex2f(build_left, build_bottom + 1.0f);
+            glVertex2f(build_left, build_top - 1.0f);
+            glEnd();
 
-        //     // HIGHLIGHT EDGES - Subtle light outlines for architectural definition
-        //     glColor4f(0.9f, 0.9f, 0.95f, 0.6f); // Subtle light highlight color
-        //     glBegin(GL_LINES);
-        //     // Top highlight edge
-        //     glVertex2f(build_left + 1.0f, build_top);
-        //     glVertex2f(build_right - 1.0f, build_top);
-        //     // Right highlight edge
-        //     glVertex2f(build_right, build_bottom + 1.0f);
-        //     glVertex2f(build_right, build_top - 1.0f);
-        //     glEnd();
-        // }
+            // HIGHLIGHT EDGES - Subtle light outlines for architectural definition
+            glColor4f(0.9f, 0.9f, 0.95f, 0.6f); // Subtle light highlight color
+            glBegin(GL_LINES);
+            // Top highlight edge
+            glVertex2f(build_left + 1.0f, build_top);
+            glVertex2f(build_right - 1.0f, build_top);
+            // Right highlight edge
+            glVertex2f(build_right, build_bottom + 1.0f);
+            glVertex2f(build_right, build_top - 1.0f);
+            glEnd();
+        }
 
-        // glLineWidth(1.0f); // Reset line width for subsequent rendering
+        glLineWidth(1.0f); // Reset line width for subsequent rendering
 
-        // DISABLED: Meteor rendering
-        // for (int i = 0; i < METEOR_COUNT; i++) {
-        //     if (meteors[i].life > 0) {
-        //         render_meteor(&meteors[i], screen_width, screen_height);
-        //     }
-        // }
+        // Render meteors
+        for (int i = 0; i < METEOR_COUNT; i++) {
+            if (meteors[i].life > 0) {
+                render_meteor(&meteors[i], screen_width, screen_height);
+            }
+        }
 
-        // DISABLED: AIRCRAFT WARNING BEACON SYSTEM
-        // render_aircraft_warning_beacons(screen_width, screen_height);
+        // CHUNK 2: AIRCRAFT WARNING BEACON SYSTEM - Aviation Safety Lighting
+        // Render FAA-compliant red beacons on tall buildings for aircraft safety
+        render_aircraft_warning_beacons(screen_width, screen_height);
 
-        // DISABLED: COMMUNICATION TOWER SYSTEMS
-        // render_communication_tower_systems(screen_width, screen_height);
+        // CHUNK 3: COMMUNICATION TOWER SYSTEMS - Cellular Transmission Infrastructure
+        // Render steel lattice towers with rotating strobe beacons and antenna arrays
+        render_communication_tower_systems(screen_width, screen_height);
 
-        // DISABLED: WATER TOWER FACILITY INSTALLATIONS
-        // render_water_tower_facility_installations(screen_width, screen_height);
+        // CHUNK 4: WATER TOWER FACILITY INSTALLATIONS - Hydraulic Infrastructure
+        // Render elevated water reservoir towers with pulsing caution lighting
+        render_water_tower_facility_installations(screen_width, screen_height);
 
-        // DISABLED: ROOF ARCHITECTURAL ACCESSORY COMPLEXITY
-        // render_roof_architectural_accessory_complexity(screen_width, screen_height);
+        // CHUNK 6: ROOF ARCHITECTURAL ACCESSORY COMPLEXITY - Advanced rooftop features
+        // Render sophisticated rooftop architectural features like helipads, solar panels, and HVAC
+        render_roof_architectural_accessory_complexity(screen_width, screen_height);
 
         // CHUNK 5: ILLUMINATED WINDOW GRID ALGORITHMS - Building Occupancy Visualization
-        // DISABLED TEMPORARILY TO TEST IF WINDOW RENDERING CAUSES FADING
-        // render_illuminated_window_grids(screen_width, screen_height);
+        // Render intelligent building occupancy visualization with time-sensitive patterns
+        render_illuminated_window_grids(screen_width, screen_height);
 
         // Swap buffers
         SDL_GL_SwapWindow(window);
@@ -1190,20 +1140,12 @@ int main(int argc, char *argv[]) {
 
 void usage(const char *prog) {
     fprintf(stderr, "Usage: %s [OPTIONS]\n", prog);
-    fprintf(stderr, "Starry Night Screensaver for Hyprland/Wayland v4.2 - CELESTIAL SPHERE\n\n");
-
-    fprintf(stderr, "★ CELESTIAL ROTATION SYSTEM ENABLED:\n");
-    fprintf(stderr, "  -r dynamic  Celestial sphere rotation (Default - Earth physics)\n");
-    fprintf(stderr, "  -r static   Legacy drifting star field\n");
-    fprintf(stderr, "  -r none     Complete celestial positioning (no rotation)\n\n");
-
-    fprintf(stderr, "GRAPHICS & ANIMATION:\n");
-    fprintf(stderr, "  -s F        Speed multiplier (default 1.0)\n");
-    fprintf(stderr, "  -d F        Star density 0.0-1.0 (default 0.5)\n");
-    fprintf(stderr, "  -m F        Meteor frequency multiplier (default 1.0)\n");
-    fprintf(stderr, "  -h          Show this help\n\n");
-
-    fprintf(stderr, "BUILD STATUS: Celestial Sphere v4.2 - Scientific Astronomical Simulation\n");
+    fprintf(stderr, "Starry Night Screensaver for Hyprland/Wayland\n\n");
+    fprintf(stderr, "OPTIONS:\n");
+    fprintf(stderr, "  -s F    Speed multiplier (default 1.0)\n");
+    fprintf(stderr, "  -d F    Star density 0.0-1.0 (default 0.5)\n");
+    fprintf(stderr, "  -m F    Meteor frequency multiplier (default 1.0)\n");
+    fprintf(stderr, "  -h      Show this help\n\n");
     fprintf(stderr, "Run with: SDL_VIDEODRIVER=wayland ./starrynight\n");
     fprintf(stderr, "Exit with ESC or mouse/keyboard input after 5s delay\n");
 }
@@ -1238,7 +1180,7 @@ void init_opengl(int width, int height) {
 void init_stars(Star *stars, int count, int screen_width, int screen_height) {
     for (int i = 0; i < count; i++) {
         stars[i].x = (float)(rand() % screen_width);
-        stars[i].y = rand() % screen_height; // Allow stars anywhere on screen height
+        stars[i].y = (float)(screen_height / 4 + (rand() % (screen_height * 3 / 4))); // Avoid bottom quarter
 
         // Gentle drifting motion
         stars[i].vx = -0.1f - (float)(rand() % 4) / 10.0f; // Subtle leftward drift
@@ -1259,55 +1201,28 @@ void init_stars(Star *stars, int count, int screen_width, int screen_height) {
 
 void update_stars(Star *stars, int count, float dt, int screen_width, int screen_height) {
     static float time = 0;
-    static float global_star_rotation = 0.0f; // Global rotation angle for gap stars
     time += dt;
-
-    // Apply super slow rotation to gap stars (using special system detection)
-    // NOTE: Only applies slow rotation to gap stars via this function
-    global_star_rotation += dt * 0.001f; // VERY slow rotation (about 1 degree per second)
 
     for (int i = 0; i < count; i++) {
         Star *s = &stars[i];
 
-        // Gap stars get global super-slow rotation instead of individual drift
-        if (s->building_gap == -1) { // Gap stars use building_gap = -1
-            // Rotate around screen center for subtler effect
-            float center_x = screen_width / 2.0f;
-            float center_y = screen_height / 2.0f;
+        // Update position with gentle drift (no settling behavior anymore)
+        s->x += s->vx * dt;
+        s->y += s->vy * dt;
 
-            // Calculate distance from center
-            float dx = s->x - center_x;
-            float dy = s->y - center_y;
+        // Wrap horizontally only
+        if (s->x < 0) s->x = screen_width;
+        if (s->x > screen_width) s->x = 0;
 
-            // Apply slow rotation
-            float cos_rot = cosf(global_star_rotation);
-            float sin_rot = sinf(global_star_rotation);
+        // All stars stay within bounds vertically
+        if (s->y < 20) s->y = screen_height - 20; // Avoid bottom area for floating stars
+        if (s->y > screen_height - 20) s->y = 20;
 
-            float new_dx = dx * cos_rot - dy * sin_rot;
-            float new_dy = dx * sin_rot + dy * cos_rot;
-
-            s->x = center_x + new_dx;
-            s->y = center_y + new_dy;
-        } else {
-            // Legacy behavior for non-gap stars (drift + wraparound)
-            s->x += s->vx * dt;
-            s->y += s->vy * dt;
-
-            // Wrap horizontally only
-            if (s->x < 0) s->x = screen_width;
-            if (s->x > screen_width) s->x = 0;
-
-            // All stars stay within bounds vertically
-            if (s->y < 20) s->y = screen_height - 20;
-            if (s->y > screen_height - 20) s->y = 20;
-        }
-
-        // RE-ENABLE TWINKLING: Oscillate around base_brightness with sine wave
-        // Gentle variation (±0.3f amplitude) for subtle, unique per-star effect
-        float twinkle_offset = sinf(time * s->twinkle_speed + s->twinkle_phase) * 0.3f;
+        // Update twinkling brightness with sine wave
+        float twinkle_offset = sinf(time * s->twinkle_speed + s->twinkle_phase) * 0.4f;
         s->brightness = s->base_brightness + twinkle_offset;
 
-        // Clamp brightness to prevent over/underflow
+        // Clamp brightness
         if (s->brightness < 0.2f) s->brightness = 0.2f;
         if (s->brightness > 1.0f) s->brightness = 1.0f;
     }
@@ -1329,14 +1244,14 @@ void render_stars(Star *stars, int count, int screen_width __attribute__((unused
         }
 
         // Set star color with brightness
-        glColor4f(r, g, b, 1.0f);  // Force full brightness to test if fading persists
+        glColor4f(r, g, b, s->brightness);
 
         // Draw the star point
         glVertex2f(s->x, s->y);
 
         // Bright stars get a glow effect (multiple translucent points)
         if (s->is_bright && s->brightness > 0.8f) {
-            glColor4f(r, g, b, 1.0f);  // Force full alpha for glow too
+            glColor4f(r, g, b, s->brightness * 0.3f);
             glVertex2f(s->x - 1, s->y);
             glVertex2f(s->x + 1, s->y);
             glVertex2f(s->x, s->y - 1);
@@ -1452,7 +1367,7 @@ void initialize_urban_complex_generation(int screen_width __attribute__((unused)
             urban_structure->x = prev_structure->x + prev_structure->width;
         }
 
-        urban_structure->y = 0.0f; // Buildings start at screen bottom edge
+        urban_structure->y = 50.0f; // Ground floor datum consistency
 
         // ARCHITECTURAL PROFILE DETERMINATION - 11 Building Archetype System
         int architectural_classification = rand() % 11; // Sophisticated typology selection
@@ -1677,11 +1592,6 @@ void initialize_urban_complex_generation(int screen_width __attribute__((unused)
 
         // Roof level elevation calculation for future three-dimensional features
         urban_structure->roof_level_elevation = urban_structure->y + urban_structure->height;
-
-        // COMMUNICATION TOWER HEIGHT INITIALIZATION - Ensure towers are tall enough for rotating beacons visible above roof
-        if (urban_structure->roof_feature_mask & (1 << ROOF_TRANSMISSION_TOWER)) {
-            urban_structure->tower_height_pixels = 50 + (rand() % 31); // Ensure towers are 50-80 pixels tall, above typical building roofs
-        }
 
         // Advanced lighting preparation (coordination system for Chunks 2-10)
         urban_structure->pulse_synchronization_timer = (float)rand() / RAND_MAX * 2.0f * PI; // Randomized phase
